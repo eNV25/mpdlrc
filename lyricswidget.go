@@ -96,7 +96,7 @@ func (w *LyricsWidget) SetLines(lines []string) {
 			lines = append(make([]string, (y/2)-1), (strings.Repeat(" ", offset) + msg))
 			break
 		}
-		lines[i] = strings.Repeat(" ", offset) + lines[i]
+		lines[i] = strings.Repeat(" ", offset+1) + lines[i]
 	}
 
 	w.TextArea.SetLines(lines)
