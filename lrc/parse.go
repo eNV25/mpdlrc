@@ -28,8 +28,8 @@ func NewParser(r io.Reader) *Parser {
 
 func (p *Parser) Parse() (*Lyrics, error) {
 	var i int
-	var tt time.Duration
-	var ll []byte
+	var tt, tmpt time.Duration
+	var ll, tmpl []byte
 	var err error
 	var ok bool
 
@@ -38,20 +38,28 @@ func (p *Parser) Parse() (*Lyrics, error) {
 
 	// loop line by line until EOF
 	for {
+		is := 0
 		ll, err = p.r.ReadSlice('\n')
 
 		ll = bytes.TrimSpace(ll)
 
 		// parse same line until no match
 		for {
-			tt, ll, ok = parseLine(ll)
+			tmpt, tmpl, ok = parseLine(ll)
 
 			if !ok {
 				break
 			}
 
+			ll = tmpl
+			tt = tmpt
+
 			i++
+			is++
 			times = append(times, tt)
+		}
+
+		for x := 0; x < is; x++ {
 			lines = append(lines, string(ll))
 		}
 
