@@ -32,10 +32,6 @@ func (l *Lyrics) N() int {
 }
 
 func (l *Lyrics) Search(d time.Duration) int {
-	ret := sort.Search(l.i, func(i int) bool { return l.times[i] >= d }) - 1
-	if ret < 0 {
-		return 0
-	} else {
-		return ret
-	}
+	// binary search
+	return sort.Search(l.i, func(i int) bool { return l.times[i] >= d })
 }

@@ -16,11 +16,12 @@ var (
 )
 
 func init() {
-	pflag.StringVar(&cfg.MusicDir, "musicdir", cfg.MusicDir, "override MusicDir")
-	pflag.StringVar(&cfg.MPD.Protocol, "mpd.protocol", cfg.MPD.Protocol, "override MPD.Protocol")
-	pflag.StringVar(&cfg.MPD.Address, "mpd.address", cfg.MPD.Address, "override MPD.Address")
-	pflag.BoolVar(&cfg.Debug, "debug", cfg.Debug, "enable debug")
-	pflag.BoolVarP(&usage, "help", "h", usage, "show this help message")
+	pflag.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override MusicDir`)
+	pflag.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override LyricsDir`)
+	pflag.StringVar(&cfg.MPD.Protocol, `mpd.protocol`, cfg.MPD.Protocol, `override MPD.Protocol (possible "unix", "tcp")`)
+	pflag.StringVar(&cfg.MPD.Address, `mpd.address`, cfg.MPD.Address, `override MPD.Address (use unix socket path or "host:port")`)
+	pflag.BoolVar(&cfg.Debug, `debug`, cfg.Debug, `enable debug`)
+	pflag.BoolVarP(&usage, `help`, `h`, usage, `show this help message`)
 }
 
 func main() {

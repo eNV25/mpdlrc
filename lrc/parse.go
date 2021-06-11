@@ -38,7 +38,7 @@ func (p *Parser) Parse() (*Lyrics, error) {
 
 	// loop line by line until EOF
 	for {
-		is := 0
+		var is int
 		ll, err = p.r.ReadSlice('\n')
 
 		ll = bytes.TrimSpace(ll)
