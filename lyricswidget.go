@@ -27,7 +27,7 @@ func NewLyricsWidget(app *Application) (ret *LyricsWidget) {
 		TextArea: new(views.TextArea),
 		app:      app,
 		cfg:      app.cfg,
-		scroll:   true,
+		scroll:   false,
 	}
 	ret.Init()
 	return ret
