@@ -74,12 +74,15 @@ func parseLine(line []byte) (tt time.Duration, ll []byte, ok bool) {
 	// [00:00.00]
 
 	// len("[00:00.00]") => 10
+	// len("00m00.00s") => 9
+
 	if len(line) < 10 {
 		return tt, ll, false
 	}
 
 	// [00:00.00] => 00m00.00s
-	tmp := line[1:3]
+	tmp := make([]byte, 0, 9)
+	tmp = append(tmp, line[1:3]...)
 	tmp = append(tmp, 'm')
 	tmp = append(tmp, line[4:9]...)
 	tmp = append(tmp, 's')
