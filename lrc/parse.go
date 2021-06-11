@@ -73,12 +73,12 @@ func parseLine(line []byte) (tt time.Duration, ll []byte, ok bool) {
 	// 0123456789
 	// [00:00.00]
 
+	if len(line) < 10 {
+		return 0, nil, false
+	}
+
 	// len("[00:00.00]") => 10
 	// len("00m00.00s") => 9
-
-	if len(line) < 10 {
-		return tt, ll, false
-	}
 
 	// [00:00.00] => 00m00.00s
 	tmp := make([]byte, 0, 9)
@@ -90,13 +90,14 @@ func parseLine(line []byte) (tt time.Duration, ll []byte, ok bool) {
 	{
 		du, err := time.ParseDuration(string(tmp))
 		if err != nil {
-			return tt, ll, false
+			return 0, nil, false
 		}
+
 		tt = du
 	}
 
 	{
-		ll = line[10:]
+		ll = append(make([]byte, 0, len(line[10:])), line[10:]...)
 	}
 
 	return tt, ll, true
