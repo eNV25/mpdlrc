@@ -13,6 +13,7 @@ type MPDClient struct {
 	client *mpd.Client
 	net    string
 	addr   string
+	closed bool
 }
 
 func NewMPDClient(net string, addr string) *MPDClient {
@@ -23,14 +24,23 @@ func NewMPDClient(net string, addr string) *MPDClient {
 }
 
 func (c *MPDClient) Pause() {
+	if c.closed {
+		return
+	}
 	_ = c.client.Pause(true)
 }
 
 func (c *MPDClient) Play() {
+	if c.closed {
+		return
+	}
 	_ = c.client.Pause(false)
 }
 
 func (c *MPDClient) TogglePlay() {
+	if c.closed {
+		return
+	}
 	switch c.State() {
 	case types.PlayState:
 		c.Pause()
@@ -48,10 +58,14 @@ func (c *MPDClient) Start() {
 }
 
 func (c *MPDClient) Stop() {
+	c.closed = true
 	c.client.Close()
 }
 
 func (c *MPDClient) NowPlaying() types.Song {
+	if c.closed {
+		return nil
+	}
 	if attrs, err := c.client.CurrentSong(); err != nil {
 		panic(err)
 	} else {
@@ -60,6 +74,9 @@ func (c *MPDClient) NowPlaying() types.Song {
 }
 
 func (c *MPDClient) State() types.State {
+	if c.closed {
+		return 0
+	}
 	if status, err := c.client.Status(); err != nil || status == nil {
 		return 0
 	} else {
@@ -76,6 +93,9 @@ func (c *MPDClient) State() types.State {
 }
 
 func (c *MPDClient) Elapsed() time.Duration {
+	if c.closed {
+		return 0
+	}
 	if status, err := c.client.Status(); err != nil || status == nil {
 		return 0
 	} else {
