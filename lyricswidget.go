@@ -105,15 +105,19 @@ func (w *LyricsWidget) SetLyrics(lyrics types.Lyrics, i int) {
 		return
 	}
 
+	times := lyrics.Times()
+	lines := lyrics.Lines()
+
 	if i < 0 {
 		if w.toCall != nil {
 			w.toCall.Stop() // cancel
 		}
-		i = lyrics.Search(w.app.client.Elapsed())
+		i = lyrics.Search(w.app.client.Elapsed()) - 1
+		if i < 0 {
+			i = 0
+			lines = []string{""}
+		}
 	}
-
-	times := lyrics.Times()
-	lines := lyrics.Lines()
 
 	_, y := w.app.Size()
 	lines = append(make([]string, (y/2)-1), lines[i])
