@@ -81,6 +81,12 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 			}
 		}
 	case *types.PlayerEvent:
+		switch app.client.State() {
+		case types.PauseState:
+			app.lyricsw.SetPaused(true)
+		case types.PlayState:
+			app.lyricsw.SetPaused(false)
+		}
 		app.SongChange(app.client.NowPlaying())
 		app.Draw()
 		return true

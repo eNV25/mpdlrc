@@ -19,6 +19,7 @@ type LyricsWidget struct {
 	cfg    *config.Config
 	toCall *time.Timer // from AfterFunc
 	scroll bool
+	paused bool
 }
 
 // NewLyricsWidget allocates new LyricsWidget.
@@ -28,6 +29,7 @@ func NewLyricsWidget(app *Application) (ret *LyricsWidget) {
 		app:      app,
 		cfg:      app.cfg,
 		scroll:   false,
+		paused:   false,
 	}
 	ret.Init()
 	return ret
@@ -101,7 +103,7 @@ func (w *LyricsWidget) SetLines(lines []string) {
 }
 
 func (w *LyricsWidget) SetLyrics(lyrics types.Lyrics, i int) {
-	if lyrics == nil {
+	if w.paused || lyrics == nil {
 		return
 	}
 
@@ -134,4 +136,8 @@ func (w *LyricsWidget) SetLyrics(lyrics types.Lyrics, i int) {
 
 func (w *LyricsWidget) SetScroll(v bool) {
 	w.scroll = v
+}
+
+func (w *LyricsWidget) SetPaused(v bool) {
+	w.paused = v
 }
