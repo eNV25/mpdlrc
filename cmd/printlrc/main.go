@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -10,10 +11,12 @@ import (
 var fpath string
 
 func init() {
-	fpath = os.Args[1]
+	flag.StringVar(&fpath, "file", os.Args[1], "select file")
 }
 
 func main() {
+	flag.Parse()
+
 	f, err := os.Open(fpath)
 	if err != nil {
 		panic(err)
@@ -30,6 +33,6 @@ func main() {
 	times := l.Times()
 
 	for i := range lines {
-		fmt.Printf("%10v     %v\n", times[i], lines[i])
+		fmt.Printf("%10v  %v\n", times[i], lines[i])
 	}
 }
