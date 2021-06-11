@@ -67,7 +67,7 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 	switch ev := ev.(type) {
 	case *tcell.EventKey:
 		switch ev.Key() {
-		case tcell.KeyCtrlC, tcell.KeyEscape, tcell.KeyEnter:
+		case tcell.KeyCtrlC, tcell.KeyEscape:
 			app.Quit()
 			return true
 		case tcell.KeyRune:
