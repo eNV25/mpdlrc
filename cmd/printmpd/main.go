@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"local/mpdlrc/mpd"
-	"local/mpdlrc/types"
 	"reflect"
 	"runtime"
+
+	"local/mpdlrc/client"
+	"local/mpdlrc/mpd"
 )
 
 func FunctionName(i interface{}) string {
@@ -19,7 +20,7 @@ func handle(err error) {
 }
 
 func main() {
-	var c types.Client = mpd.NewMPDClient("unix", "/run/user/1000/mpd/socket")
+	var c client.Client = mpd.NewMPDClient("unix", "/run/user/1000/mpd/socket")
 	defer c.Stop()
 	c.Start()
 	fmt.Println(c.NowPlaying())

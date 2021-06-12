@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"local/mpdlrc/config"
-	"local/mpdlrc/types"
+	"local/mpdlrc/lyrics"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
@@ -96,13 +96,13 @@ func (w *LyricsWidget) SetLines(lines []string) {
 			lines = append(make([]string, (y/2)-1), (strings.Repeat(" ", offset) + msg))
 			break
 		}
-		lines[i] = strings.Repeat(" ", offset+1) + lines[i]
+		lines[i] = strings.Repeat(" ", offset+1) + lines[i] // centre line
 	}
 
 	w.TextArea.SetLines(lines)
 }
 
-func (w *LyricsWidget) SetLyrics(lyrics types.Lyrics, i int) {
+func (w *LyricsWidget) SetLyrics(lyrics lyrics.Lyrics, i int) {
 	if w.paused || lyrics == nil {
 		return
 	}
@@ -116,13 +116,14 @@ func (w *LyricsWidget) SetLyrics(lyrics types.Lyrics, i int) {
 		}
 		i = lyrics.Search(w.app.client.Elapsed()) - 1
 		if i < 0 {
+			// blank screen
 			i = 0
 			lines = []string{""}
 		}
 	}
 
 	_, y := w.app.Size()
-	lines = append(make([]string, (y/2)-1), lines[i])
+	lines = append(make([]string, (y/2)-1), lines[i]) // centre line
 	w.SetLines(lines)
 
 	if i >= (lyrics.N())-1 {

@@ -1,20 +1,10 @@
-package types
+package events
 
 import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
-
-type PlayerEvent struct {
-	*tcell.EventTime
-}
-
-func NewPlayerEvent() *PlayerEvent {
-	ev := new(tcell.EventTime)
-	ev.SetEventNow()
-	return &PlayerEvent{ev}
-}
 
 type TickerEvent struct {
 	*tcell.EventTime

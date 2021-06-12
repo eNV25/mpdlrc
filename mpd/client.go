@@ -4,7 +4,8 @@ import (
 	"strconv"
 	"time"
 
-	"local/mpdlrc/types"
+	"local/mpdlrc/song"
+	"local/mpdlrc/state"
 
 	"github.com/fhs/gompd/v2/mpd"
 )
@@ -42,9 +43,9 @@ func (c *MPDClient) TogglePlay() {
 		return
 	}
 	switch c.State() {
-	case types.PlayState:
+	case state.PlayState:
 		c.Pause()
-	case types.PauseState:
+	case state.PauseState:
 		c.Play()
 	}
 }
@@ -62,7 +63,7 @@ func (c *MPDClient) Stop() {
 	c.client.Close()
 }
 
-func (c *MPDClient) NowPlaying() types.Song {
+func (c *MPDClient) NowPlaying() song.Song {
 	if c.closed {
 		return nil
 	}
@@ -73,7 +74,7 @@ func (c *MPDClient) NowPlaying() types.Song {
 	}
 }
 
-func (c *MPDClient) State() types.State {
+func (c *MPDClient) State() state.State {
 	if c.closed {
 		return 0
 	}
@@ -82,11 +83,11 @@ func (c *MPDClient) State() types.State {
 	} else {
 		switch status["state"] {
 		case "play":
-			return types.PlayState
+			return state.PlayState
 		case "stop":
-			return types.StopState
+			return state.StopState
 		case "pause":
-			return types.PauseState
+			return state.PauseState
 		}
 	}
 	return 0

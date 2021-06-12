@@ -1,4 +1,4 @@
-package types
+package song
 
 type Song interface {
 	ID() string

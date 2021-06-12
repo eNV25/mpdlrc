@@ -1,4 +1,4 @@
-package types
+package client
 
 import "github.com/gdamore/tcell/v2"
 

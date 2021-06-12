@@ -6,10 +6,14 @@ import (
 	"path"
 	"time"
 
+	"local/mpdlrc/client"
 	"local/mpdlrc/config"
+	"local/mpdlrc/events"
 	"local/mpdlrc/lrc"
+	"local/mpdlrc/lyrics"
 	"local/mpdlrc/mpd"
-	"local/mpdlrc/types"
+	"local/mpdlrc/song"
+	"local/mpdlrc/state"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
@@ -26,10 +30,10 @@ type Application struct {
 	view   views.View
 	widget views.Widget
 
-	client  types.Client
-	watcher types.Watcher
-	song    types.Song
-	lyrics  types.Lyrics
+	client  client.Client
+	watcher client.Watcher
+	song    song.Song
+	lyrics  lyrics.Lyrics
 	cfg     *config.Config
 	lyricsw *LyricsWidget
 	quitch  chan struct{}
@@ -80,17 +84,17 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 				return true
 			}
 		}
-	case *types.PlayerEvent:
+	case *events.PlayerEvent:
 		switch app.client.State() {
-		case types.PauseState:
+		case state.PauseState:
 			app.lyricsw.SetPaused(true)
-		case types.PlayState:
+		case state.PlayState:
 			app.lyricsw.SetPaused(false)
 		}
 		app.SongChange(app.client.NowPlaying())
 		app.Draw()
 		return true
-	case *types.TickerEvent:
+	case *events.TickerEvent:
 		// no-op
 		return true
 	}
@@ -109,12 +113,12 @@ func (app *Application) SetView(view views.View) {
 	app.widget.SetView(view)
 }
 
-func (app *Application) SongChange(song types.Song) {
+func (app *Application) SongChange(song song.Song) {
 	app.song = song
 	if r, err := os.Open(
 		path.Join(app.cfg.LyricsDir, app.song.LRCFile()),
 	); err != nil {
-		app.lyrics = lrc.NewLyrics(make([]time.Duration, 1), make([]string, 1)) // empty
+		app.lyrics = lrc.NewLyrics(make([]time.Duration, 1), make([]string, 1)) // blank screen
 	} else {
 		if l, err := lrc.NewParser(r).Parse(); err != nil {
 			panic(err)
@@ -129,8 +133,8 @@ func (app *Application) Start() {
 	app.client.Start()
 	app.SongChange(app.client.NowPlaying())
 	app.Application.Start()
-	go types.PostTickerEvents(app.PostEvent, 1*time.Second, app.quitch) // ticker events
-	go app.watcher.PostEvents(app.PostEvent, app.quitch)                // mpd player events
+	go events.PostTickerEvents(app.PostEvent, 1*time.Second, app.quitch) // ticker events
+	go app.watcher.PostEvents(app.PostEvent, app.quitch)                 // mpd player events
 }
 
 // Resize implements the root Widget.
@@ -142,6 +146,8 @@ func (app *Application) Resize() {
 func (app *Application) Quit() {
 	app.Application.Quit()
 	{
+		// if already closed; no-op
+		// else; close
 		select {
 		case _, ok := <-app.quitch:
 			if ok {

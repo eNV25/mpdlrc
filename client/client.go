@@ -1,13 +1,16 @@
-package types
+package client
 
 import (
 	"time"
+
+	"local/mpdlrc/song"
+	"local/mpdlrc/state"
 )
 
 type Client interface {
-	NowPlaying() Song
+	NowPlaying() song.Song
 	Elapsed() time.Duration
-	State() State
+	State() state.State
 	Pause()
 	TogglePlay()
 	Play()

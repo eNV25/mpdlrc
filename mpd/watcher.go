@@ -1,7 +1,7 @@
 package mpd
 
 import (
-	"local/mpdlrc/types"
+	"local/mpdlrc/events"
 
 	"github.com/fhs/gompd/v2/mpd"
 	"github.com/gdamore/tcell/v2"
@@ -27,7 +27,7 @@ func (w *MPDWatcher) PostEvents(postEvent func(tcell.Event) error, quit <-chan s
 		case v := <-w.watcher.Event:
 			switch v {
 			case "player":
-				_ = postEvent(types.NewPlayerEvent())
+				_ = postEvent(events.NewPlayerEvent())
 			}
 		}
 	}
