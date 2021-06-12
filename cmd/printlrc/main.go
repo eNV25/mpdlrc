@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"local/mpdlrc/lrc"
+	"github.com/env25/mpdlrc/lrc"
 )
 
 var fpath string

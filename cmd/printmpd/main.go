@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"runtime"
 
-	"local/mpdlrc/client"
-	"local/mpdlrc/mpd"
+	"github.com/env25/mpdlrc/internal/client"
+	"github.com/env25/mpdlrc/internal/mpd"
 )
 
 func FunctionName(i interface{}) string {

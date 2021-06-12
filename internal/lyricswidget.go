@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"local/mpdlrc/config"
-	"local/mpdlrc/lyrics"
+	"github.com/env25/mpdlrc/internal/config"
+	"github.com/env25/mpdlrc/internal/lyrics"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"

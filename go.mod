@@ -1,4 +1,4 @@
-module local/mpdlrc
+module github.com/env25/mpdlrc
 
 go 1.16
 

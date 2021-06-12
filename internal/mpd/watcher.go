@@ -1,7 +1,7 @@
 package mpd
 
 import (
-	"local/mpdlrc/events"
+	"github.com/env25/mpdlrc/internal/events"
 
 	"github.com/fhs/gompd/v2/mpd"
 	"github.com/gdamore/tcell/v2"

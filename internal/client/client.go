@@ -3,8 +3,8 @@ package client
 import (
 	"time"
 
-	"local/mpdlrc/song"
-	"local/mpdlrc/state"
+	"github.com/env25/mpdlrc/internal/song"
+	"github.com/env25/mpdlrc/internal/state"
 )
 
 type Client interface {

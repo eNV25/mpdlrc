@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"time"
 
-	"local/mpdlrc/song"
-	"local/mpdlrc/state"
+	"github.com/env25/mpdlrc/internal/song"
+	"github.com/env25/mpdlrc/internal/state"
 
 	"github.com/fhs/gompd/v2/mpd"
 )
