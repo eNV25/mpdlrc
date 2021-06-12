@@ -78,5 +78,8 @@ func (cfg *Config) Assert() error {
 	if cfg.MusicDir == "" || cfg.MusicDir[:1] != "/" {
 		return errors.New("Invalid path in MusicDir")
 	}
+	if cfg.LyricsDir == "" || cfg.LyricsDir[:1] != "/" {
+		return errors.New("Invalid path in LyricsDir")
+	}
 	return nil
 }
