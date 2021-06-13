@@ -21,6 +21,7 @@ func HomeDir() string {
 func HomeDirUser(usr string) string {
 	if u, err := user.Lookup(usr); err != nil {
 		// fallback
+		// path.Dir("/home/user") => "/home"
 		return path.Join(path.Dir(HomeDir()), usr)
 	} else {
 		return u.HomeDir

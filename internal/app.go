@@ -1,4 +1,4 @@
-package mpdlrc
+package internal
 
 import (
 	"fmt"

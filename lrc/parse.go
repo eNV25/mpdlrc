@@ -8,22 +8,28 @@ import (
 	"time"
 )
 
+// Parse parses a byte slice of LRC lyrics.
 func Parse(data []byte) (*Lyrics, error) {
 	return NewParser(bytes.NewReader(data)).Parse()
 }
 
+// ParseString parses a string of LRC lyrics.
 func ParseString(text string) (*Lyrics, error) {
 	return NewParser(strings.NewReader(text)).Parse()
 }
 
+// Perser is a parser type.
 type Parser struct {
 	r *bufio.Reader
 }
 
+// NewParser return a new parser from a reader.
 func NewParser(r io.Reader) *Parser {
 	return &Parser{r: bufio.NewReader(r)}
 }
 
+// Parse parses the reader according to the LRC format.
+// https://en.wikipedia.org/wiki/LRC_(file_format)
 func (p *Parser) Parse() (*Lyrics, error) {
 	var i int
 	var tt, tmpt time.Duration

@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	mpdlrc "github.com/env25/mpdlrc/internal"
+	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/config"
 
 	"github.com/spf13/pflag"
@@ -32,7 +32,7 @@ func main() {
 			case *os.PathError:
 				// no-op
 			default:
-				log.Fatalln(err)
+				log.Println(err)
 			}
 		}
 	}
@@ -50,7 +50,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	if err := mpdlrc.NewApplication(cfg).Run(); err != nil {
+	if err := internal.NewApplication(cfg).Run(); err != nil {
 		log.Fatalln(err)
 	}
 

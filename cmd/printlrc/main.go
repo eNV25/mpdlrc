@@ -24,13 +24,13 @@ func main() {
 		defer f.Close()
 	}
 
-	l, err := lrc.NewParser(f).Parse()
+	lrcs, err := lrc.NewParser(f).Parse()
 	if err != nil {
 		panic(err)
 	}
 
-	lines := l.Lines()
-	times := l.Times()
+	lines := lrcs.Lines()
+	times := lrcs.Times()
 
 	for i := range lines {
 		fmt.Printf("%10v  %v\n", times[i], lines[i])
