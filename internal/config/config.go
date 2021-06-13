@@ -64,11 +64,14 @@ func (cfg *Config) Expand() {
 
 func expandTilde(str string) string {
 	if str != "" && (str == "~" || str[:2] == "~/") {
+		// ~/path/
 		return HomeDir() + str[1:]
 	} else if str[:1] == "~" {
+		// ~user/path/
 		sp := strings.Split(str[1:], "/")
 		return path.Join(HomeDirUser(sp[0]), path.Join(sp[1:]...))
 	} else {
+		// path/ or /path/
 		return str
 	}
 }

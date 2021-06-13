@@ -101,12 +101,6 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 	return app.widget.HandleEvent(ev)
 }
 
-// SetScreen overrides views.Application.SetScreen.
-func (app *Application) SetScreen(screen tcell.Screen) {
-	app.Screen = screen
-	app.Application.SetScreen(screen)
-}
-
 // SetView implements the root Widget.
 func (app *Application) SetView(view views.View) {
 	app.view = view
@@ -162,19 +156,19 @@ func (app *Application) Quit() {
 
 // Run runs the application, overrides views.Application.Run.
 func (app *Application) Run() (err error) {
-	var screen tcell.Screen
-
-	screen, err = tcell.NewScreen()
+	app.Screen, err = tcell.NewScreen()
 	if err != nil {
 		return fmt.Errorf("allocate screen: %w", err)
 	}
 
-	app.SetScreen(screen)
-	app.SetRootWidget(app)
+	app.Application.SetScreen(app.Screen)
+	app.Application.SetRootWidget(app)
 
 	defer func() {
-		app.Quit()
-		err = app.Wait()
+		if err == nil {
+			app.Quit()
+			err = app.Wait()
+		}
 	}()
 
 	app.Start()

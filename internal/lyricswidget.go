@@ -11,7 +11,7 @@ import (
 	"github.com/gdamore/tcell/v2/views"
 )
 
-// LyricsWidget is a Widget implentaion.
+// LyricsWidget is a Widget implementation.
 type LyricsWidget struct {
 	*views.TextArea
 
@@ -76,6 +76,7 @@ func (w *LyricsWidget) HandleEvent(ev tcell.Event) bool {
 	return w.TextArea.HandleEvent(ev)
 }
 
+// Scroll in the direction represented by d.
 func (w *LyricsWidget) Scroll(d ScrollDirection) {
 	ev := tcell.NewEventKey(tcell.Key(d), rune(0), tcell.ModMask(0))
 	w.TextArea.HandleEvent(ev)
@@ -102,6 +103,10 @@ func (w *LyricsWidget) SetLines(lines []string) {
 	w.TextArea.SetLines(lines)
 }
 
+// SetLyrics sets a particular line i of lyrics to be displayed.  Each call sets
+// an AfterFunc for the next line that needs to be displayed, so this
+// method only needs to be called when the lyrics change. If i is -1 it cancels
+// the AfterFunc and queries the current time from the client.
 func (w *LyricsWidget) SetLyrics(lyrics lyrics.Lyrics, i int) {
 	if w.paused || lyrics == nil {
 		return

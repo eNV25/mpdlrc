@@ -21,9 +21,7 @@ type Parser struct {
 }
 
 func NewParser(r io.Reader) *Parser {
-	return &Parser{
-		r: bufio.NewReader(r),
-	}
+	return &Parser{r: bufio.NewReader(r)}
 }
 
 func (p *Parser) Parse() (*Lyrics, error) {
@@ -39,6 +37,7 @@ func (p *Parser) Parse() (*Lyrics, error) {
 	// loop line by line until EOF
 	for {
 		var is int
+
 		ll, err = p.r.ReadSlice('\n')
 
 		ll = bytes.TrimSpace(ll)
