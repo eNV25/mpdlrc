@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/internal/lyrics"
 
@@ -15,11 +16,14 @@ import (
 type LyricsWidget struct {
 	*views.TextArea
 
-	app    *Application
-	cfg    *config.Config
-	toCall *time.Timer // from AfterFunc
-	scroll bool
-	paused bool
+	client client.Client
+
+	app     *Application
+	cfg     *config.Config
+	toCall  *time.Timer // from AfterFunc
+	elapsed time.Duration
+	scroll  bool
+	paused  bool
 }
 
 // NewLyricsWidget allocates new LyricsWidget.
@@ -28,6 +32,7 @@ func NewLyricsWidget(app *Application) (ret *LyricsWidget) {
 		TextArea: new(views.TextArea),
 		app:      app,
 		cfg:      app.cfg,
+		client:   app.client,
 		scroll:   false,
 		paused:   false,
 	}
@@ -87,14 +92,12 @@ func (w *LyricsWidget) SetContent(text string) {
 }
 
 func (w *LyricsWidget) SetLines(lines []string) {
-	x, y := w.app.Size()
+	x, _ := w.app.Size()
 
 	for i := range lines {
 		offset := (x - len(lines[i])) / 2
 		if offset < 0 {
-			msg := "screen is too small"
-			offset = (x - len(msg)) / 2
-			lines = append(make([]string, (y/2)-1), (strings.Repeat(" ", offset) + msg))
+			lines = make([]string, 1) // empty
 			break
 		}
 		lines[i] = strings.Repeat(" ", offset+1) + lines[i] // centre line
@@ -119,7 +122,8 @@ func (w *LyricsWidget) SetLyrics(lyrics lyrics.Lyrics, i int) {
 		if w.toCall != nil {
 			w.toCall.Stop() // cancel
 		}
-		i = lyrics.Search(w.app.client.Elapsed()) - 1
+		w.elapsed = w.client.Elapsed()
+		i = lyrics.Search(w.elapsed) - 1
 		if i < 0 {
 			// blank screen
 			i = 0
@@ -135,9 +139,11 @@ func (w *LyricsWidget) SetLyrics(lyrics lyrics.Lyrics, i int) {
 		return
 	}
 
-	w.toCall = time.AfterFunc(times[i+1]-times[i], func() {
+	w.toCall = time.AfterFunc(times[i+1]-w.elapsed, func() {
 		w.SetLyrics(lyrics, i+1)
 	})
+
+	w.elapsed = w.elapsed + (times[i+1] - w.elapsed)
 }
 
 func (w *LyricsWidget) SetScroll(v bool) {
