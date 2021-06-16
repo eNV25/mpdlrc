@@ -4,9 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/env25/mpdlrc/internal/client"
-	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/internal/lyrics"
+	"github.com/env25/mpdlrc/internal/status"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
@@ -16,14 +15,15 @@ import (
 type LyricsWidget struct {
 	*views.TextArea
 
-	client client.Client
+	view views.View
 
+	lyrics  lyrics.Lyrics
 	app     *Application
-	cfg     *config.Config
 	toCall  *time.Timer // from AfterFunc
 	elapsed time.Duration
 	scroll  bool
 	paused  bool
+	index   int
 }
 
 // NewLyricsWidget allocates new LyricsWidget.
@@ -31,8 +31,6 @@ func NewLyricsWidget(app *Application) (ret *LyricsWidget) {
 	ret = &LyricsWidget{
 		TextArea: new(views.TextArea),
 		app:      app,
-		cfg:      app.cfg,
-		client:   app.client,
 		scroll:   false,
 		paused:   false,
 	}
@@ -92,7 +90,7 @@ func (w *LyricsWidget) SetContent(text string) {
 }
 
 func (w *LyricsWidget) SetLines(lines []string) {
-	x, _ := w.app.Size()
+	x, _ := w.view.Size()
 
 	for i := range lines {
 		offset := (x - len(lines[i])) / 2
@@ -106,44 +104,42 @@ func (w *LyricsWidget) SetLines(lines []string) {
 	w.TextArea.SetLines(lines)
 }
 
-// SetLyrics sets a particular line i of lyrics to be displayed.  Each call sets
-// an AfterFunc for the next line that needs to be displayed, so this
-// method only needs to be called when the lyrics change. If i is -1 it cancels
-// the AfterFunc and queries the current time from the client.
-func (w *LyricsWidget) SetLyrics(lyrics lyrics.Lyrics, i int) {
-	if w.paused || lyrics == nil {
+func (w *LyricsWidget) Update(status status.Status, lyrics lyrics.Lyrics) {
+	if w.paused {
 		return
 	}
 
-	times := lyrics.Times()
-	lines := lyrics.Lines()
-
-	if i < 0 {
+	if status != nil && lyrics != nil {
 		if w.toCall != nil {
 			w.toCall.Stop() // cancel
 		}
-		w.elapsed = w.client.Elapsed()
-		i = lyrics.Search(w.elapsed) - 1
-		if i < 0 {
-			// blank screen
-			i = 0
-			lines = []string{""}
-		}
+		w.lyrics = lyrics
+		w.elapsed = status.Elapsed()
+		w.index = lyrics.Search(w.elapsed) - 1
 	}
 
-	_, y := w.app.Size()
-	lines = append(make([]string, (y/2)-1), lines[i]) // centre line
+	times := w.lyrics.Times()
+	lines := w.lyrics.Lines()
+
+	if w.index < 0 {
+		// blank screen
+		w.index = 0
+		lines = []string{""}
+	}
+
+	_, y := w.view.Size()
+	lines = append(make([]string, y/2), lines[w.index]) // centre line
 	w.SetLines(lines)
 
-	if i >= (lyrics.N())-1 {
+	if w.index >= len(times)-1 {
 		return
 	}
 
-	w.toCall = time.AfterFunc(times[i+1]-w.elapsed, func() {
-		w.SetLyrics(lyrics, i+1)
+	w.toCall = time.AfterFunc(times[w.index+1]-w.elapsed, func() {
+		w.index += 1
+		w.elapsed = times[w.index]
+		w.Update(nil, nil)
 	})
-
-	w.elapsed = w.elapsed + (times[i+1] - w.elapsed)
 }
 
 func (w *LyricsWidget) SetScroll(v bool) {
@@ -152,4 +148,9 @@ func (w *LyricsWidget) SetScroll(v bool) {
 
 func (w *LyricsWidget) SetPaused(v bool) {
 	w.paused = v
+}
+
+func (w *LyricsWidget) SetView(view views.View) {
+	w.view = view
+	w.TextArea.SetView(view)
 }

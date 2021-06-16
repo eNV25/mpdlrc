@@ -13,6 +13,7 @@ import (
 	"github.com/env25/mpdlrc/internal/mpd"
 	"github.com/env25/mpdlrc/internal/song"
 	"github.com/env25/mpdlrc/internal/state"
+	"github.com/env25/mpdlrc/internal/status"
 	"github.com/env25/mpdlrc/lrc"
 
 	"github.com/gdamore/tcell/v2"
@@ -27,12 +28,12 @@ type Application struct {
 
 	WW *views.WidgetWatchers
 
-	view   views.View
-	widget views.Widget
+	focused views.Widget
 
 	client  client.Client
 	watcher client.Watcher
 	song    song.Song
+	status  status.Status
 	lyrics  lyrics.Lyrics
 	cfg     *config.Config
 	lyricsw *LyricsWidget
@@ -55,15 +56,14 @@ func (app *Application) Init() {
 	app.client = mpd.NewMPDClient(app.cfg.MPD.Protocol, app.cfg.MPD.Address)
 	app.watcher = mpd.NewMPDWatcher(app.cfg.MPD.Protocol, app.cfg.MPD.Address)
 	app.lyricsw = NewLyricsWidget(app)
-	app.widget = app.lyricsw
+	app.focused = app.lyricsw
 }
 
 // Draw implements the root Widget.
 func (app *Application) Draw() {
-	if app.widget == app.lyricsw {
-		app.lyricsw.SetLyrics(app.lyrics, -1)
+	if app.focused == app.lyricsw {
+		app.lyricsw.Draw()
 	}
-	app.widget.Draw()
 }
 
 // HandleEvent implements the root Widget.
@@ -80,52 +80,55 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 				app.Quit()
 				return true
 			case ' ':
-				app.client.TogglePlay()
 				return true
 			}
 		}
 	case *events.PlayerEvent:
-		switch app.client.State() {
-		case state.PauseState:
-			app.lyricsw.SetPaused(true)
-		case state.PlayState:
-			app.lyricsw.SetPaused(false)
-		}
-		app.SongChange(app.client.NowPlaying())
+		app.Update()
 		app.Draw()
 		return true
 	case *events.TickerEvent:
-		// no-op
+		app.client.Ping()
 		return true
 	}
-	return app.widget.HandleEvent(ev)
+	return app.focused.HandleEvent(ev)
 }
 
 // SetView implements the root Widget.
 func (app *Application) SetView(view views.View) {
-	app.view = view
-	app.widget.SetView(view)
+	app.lyricsw.SetView(view)
 }
 
-func (app *Application) SongChange(song song.Song) {
-	app.song = song
+func (app *Application) Lyrics(song song.Song) lyrics.Lyrics {
 	if r, err := os.Open(
 		path.Join(app.cfg.LyricsDir, app.song.LRCFile()),
 	); err != nil {
-		app.lyrics = lrc.NewLyrics(make([]time.Duration, 1), make([]string, 1)) // blank screen
+		return lrc.NewLyrics(make([]time.Duration, 1), make([]string, 1)) // blank screen
 	} else {
 		if l, err := lrc.NewParser(r).Parse(); err != nil {
-			panic(err)
+			return lrc.NewLyrics(make([]time.Duration, 1), make([]string, 1)) // blank screen
 		} else {
-			app.lyrics = l
+			return l
 		}
 	}
+}
+
+func (app *Application) Update() {
+	app.song = app.client.NowPlaying()
+	app.lyrics = app.Lyrics(app.song)
+	app.status = app.client.Status()
+	switch app.status.State() {
+	case state.PauseState:
+		app.lyricsw.SetPaused(true)
+	case state.PlayState:
+		app.lyricsw.SetPaused(false)
+	}
+	app.lyricsw.Update(app.status, app.lyrics)
 }
 
 // Start overrides views.Application.Start.
 func (app *Application) Start() {
 	app.client.Start()
-	app.SongChange(app.client.NowPlaying())
 	app.Application.Start()
 	go events.PostTickerEvents(app.PostEvent, 1*time.Second, app.quitch) // ticker events
 	go app.watcher.PostEvents(app.PostEvent, app.quitch)                 // mpd player events
@@ -133,7 +136,8 @@ func (app *Application) Start() {
 
 // Resize implements the root Widget.
 func (app *Application) Resize() {
-	app.widget.Resize()
+	app.Update()
+	app.lyricsw.Resize()
 }
 
 // Quit performs shotdown steps, overrides views.Application.Quit.

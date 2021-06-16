@@ -1,7 +1,6 @@
 package mpd
 
 import (
-	"fmt"
 	"path"
 )
 
@@ -30,15 +29,4 @@ func (s Song) File() string {
 func (s Song) LRCFile() string {
 	file := s.File()
 	return file[:(len(file)-len(path.Ext(file)))] + ".lrc"
-}
-
-func (s Song) String() string {
-	return fmt.Sprintf(`
-ID: %s
-Title: %s
-Artist: %s
-Album: %s
-File: %s
-LRCFile: %s
-`, s.ID(), s.Title(), s.Artist(), s.Album(), s.File(), s.LRCFile())
 }

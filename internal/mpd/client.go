@@ -1,11 +1,8 @@
 package mpd
 
 import (
-	"strconv"
-	"time"
-
 	"github.com/env25/mpdlrc/internal/song"
-	"github.com/env25/mpdlrc/internal/state"
+	"github.com/env25/mpdlrc/internal/status"
 
 	"github.com/fhs/gompd/v2/mpd"
 )
@@ -38,16 +35,8 @@ func (c *MPDClient) Play() {
 	_ = c.client.Pause(false)
 }
 
-func (c *MPDClient) TogglePlay() {
-	if c.closed {
-		return
-	}
-	switch c.State() {
-	case state.PlayState:
-		c.Pause()
-	case state.PauseState:
-		c.Play()
-	}
+func (c *MPDClient) Ping() {
+	_ = c.client.Ping()
 }
 
 func (c *MPDClient) Start() {
@@ -74,33 +63,13 @@ func (c *MPDClient) NowPlaying() song.Song {
 	}
 }
 
-func (c *MPDClient) State() state.State {
+func (c *MPDClient) Status() status.Status {
 	if c.closed {
-		return 0
+		return nil
 	}
 	if status, err := c.client.Status(); err != nil || status == nil {
-		return 0
+		return nil
 	} else {
-		switch status["state"] {
-		case "play":
-			return state.PlayState
-		case "stop":
-			return state.StopState
-		case "pause":
-			return state.PauseState
-		}
-	}
-	return 0
-}
-
-func (c *MPDClient) Elapsed() time.Duration {
-	if c.closed {
-		return 0
-	}
-	if status, err := c.client.Status(); err != nil || status == nil {
-		return 0
-	} else {
-		elapsed, _ := strconv.ParseFloat(status["elapsed"], 64)
-		return time.Duration(elapsed * float64(time.Second))
+		return Status(status)
 	}
 }
