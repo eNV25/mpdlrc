@@ -62,7 +62,6 @@ func NewApplication(cfg *config.Config) *Application {
 // Draw implements the root Widget.
 func (app *Application) Draw() {
 	app.lyricsw.Draw()
-	app.Show()
 }
 
 // Update subwidgets after querying information from client.
@@ -108,7 +107,7 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 		return true
 	case *events.PlayerEvent:
 		app.Update()
-		app.PostFunc(app.Draw)
+		app.Draw()
 		return true
 	case *events.DrawEvent:
 		app.Draw()
@@ -186,6 +185,8 @@ func (app *Application) Run() error {
 		events.NewPingEvent, app.quit)
 
 	for {
+		app.Show()
+
 		select {
 		case <-app.quit:
 			goto end
@@ -193,6 +194,7 @@ func (app *Application) Run() error {
 			app.HandleEvent(ev)
 		}
 	}
+
 end:
 	return app.err
 }

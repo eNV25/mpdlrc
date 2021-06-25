@@ -56,10 +56,11 @@ func (w *LyricsWidget) Update(status status.Status, lyrics lyrics.Lyrics) {
 	}
 
 	w.lyrics = lyrics
-	w.lines = w.lyrics.Lines()
-	w.times = w.lyrics.Times()
-	w.elapsed = status.Elapsed()
+	w.lines = lyrics.Lines()
+	w.times = lyrics.Times()
 	w.total = lyrics.N()
+
+	w.elapsed = status.Elapsed()
 	w.index = lyrics.Search(w.elapsed)
 
 	if w.index < 0 || w.index >= w.total {
@@ -67,7 +68,7 @@ func (w *LyricsWidget) Update(status status.Status, lyrics lyrics.Lyrics) {
 		w.total = 1
 		w.lines = make([]string, 1)
 	} else {
-		w.index--
+		w.index -= 1
 	}
 
 	w.update()
@@ -85,8 +86,6 @@ func (w *LyricsWidget) update() {
 	}
 
 	w.toCall = time.AfterFunc((w.times[w.index+1] - w.elapsed), func() {
-		w.lines = w.lyrics.Lines()
-		w.times = w.lyrics.Times()
 		w.index += 1
 		w.elapsed = w.times[w.index]
 		w.update()
