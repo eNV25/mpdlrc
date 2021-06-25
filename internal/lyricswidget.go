@@ -98,11 +98,7 @@ func (w *LyricsWidget) SetLine(line string) {
 	if offset < 0 {
 		offset = 1
 	}
-	lines := make([]string, ((y / 2) - 1), (y / 2))
-	for i := range lines {
-		lines[i] = " "
-	}
-	lines = append(lines, (strings.Repeat(" ", offset) + line))
+	lines := append(make([]string, ((y/2)-1), (y/2)), (strings.Repeat(" ", offset) + line))
 	w.textArea.SetLines(lines)
 }
 

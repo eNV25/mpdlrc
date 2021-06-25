@@ -101,12 +101,14 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 			}
 		}
 	case *tcell.EventResize:
-		app.Sync()
 		app.Resize()
+		app.Update()
+		app.Draw()
+		app.Sync()
 		return true
 	case *events.PlayerEvent:
 		app.Update()
-		app.Draw()
+		app.PostFunc(app.Draw)
 		return true
 	case *events.DrawEvent:
 		app.Draw()
