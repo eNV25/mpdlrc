@@ -30,17 +30,18 @@ func Width(b []byte) (n int) {
 
 // WidthOfRune returns fixed-width width of rune.
 func WidthOfRune(r rune) int {
-	//      non-printing,       combing character,       null character
-	if !unicode.IsPrint(r) || unicode.Is(unicode.Mn, r) || r == '\x00' {
+	switch {
+	case unicode.Is(unicode.Mn, r), !unicode.IsGraphic(r):
 		return 0
-	}
-	switch width.LookupRune(r).Kind() {
-	case width.EastAsianWide, width.EastAsianFullwidth:
-		return 2
-	case width.EastAsianNarrow, width.EastAsianHalfwidth, width.EastAsianAmbiguous, width.Neutral:
-		return 1
 	default:
-		return 0
+		switch width.LookupRune(r).Kind() {
+		case width.EastAsianWide, width.EastAsianFullwidth:
+			return 2
+		case width.EastAsianNarrow, width.EastAsianHalfwidth, width.EastAsianAmbiguous, width.Neutral:
+			return 1
+		default:
+			return 0
+		}
 	}
 }
 
