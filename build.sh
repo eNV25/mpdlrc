@@ -1,2 +1,3 @@
 #!/bin/sh
+eval "$(go env | sed -E 's/(.*=)".*"/export \1/g')"
 go build -v -o ./bin/ ./...
