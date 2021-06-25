@@ -7,6 +7,7 @@ import (
 	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/status"
 	"github.com/env25/mpdlrc/textwidth"
+	"golang.org/x/text/width"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
@@ -74,10 +75,10 @@ func (w *LyricsWidget) Update(status status.Status, lyrics lyrics.Lyrics) {
 
 func (w *LyricsWidget) update() {
 	if w.index < 0 {
-		w.index = 0
-		w.lines = make([]string, 1)
+		w.SetLine("")
+	} else {
+		w.SetLine(w.lines[w.index])
 	}
-	w.SetLine(w.lines[w.index])
 
 	if w.index >= (w.total - 1) {
 		return
@@ -93,6 +94,7 @@ func (w *LyricsWidget) update() {
 }
 
 func (w *LyricsWidget) SetLine(line string) {
+	line = width.Fold.String(line)
 	x, y := w.view.Size()
 	offset := (x - textwidth.WidthOfString(line)) / 2
 	if offset < 0 {
