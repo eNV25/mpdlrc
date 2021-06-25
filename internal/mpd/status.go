@@ -10,17 +10,20 @@ import (
 type Status map[string]string
 
 func (s Status) Duration() time.Duration {
-	duration, _ := strconv.ParseFloat(s["duration"], 64)
-	return time.Duration(duration * float64(time.Second))
+	return secondStringToDuration(s["duration"])
 }
 
 func (s Status) Elapsed() time.Duration {
-	elapsed, _ := strconv.ParseFloat(s["elapsed"], 64)
-	return time.Duration(elapsed * float64(time.Second))
+	return secondStringToDuration(s["elapsed"])
+}
+
+func secondStringToDuration(str string) time.Duration {
+	parsed, _ := strconv.ParseFloat(str, 64)
+	return time.Duration(parsed * float64(time.Second))
 }
 
 func (s Status) State() state.State {
-	switch s["status"] {
+	switch s["state"] {
 	case "play":
 		return state.PlayState
 	case "stop":

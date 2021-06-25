@@ -6,6 +6,7 @@ import (
 
 	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/status"
+	"github.com/env25/mpdlrc/textwidth"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
@@ -13,29 +14,96 @@ import (
 
 // LyricsWidget is a Widget implementation.
 type LyricsWidget struct {
-	*views.TextArea
+	app *Application
 
-	view views.View
+	view     views.View
+	textArea *views.TextArea
 
-	lyrics  lyrics.Lyrics
-	app     *Application
-	toCall  *time.Timer // from AfterFunc
+	quit chan struct{}
+
+	toCall  *time.Timer
 	elapsed time.Duration
-	scroll  bool
-	paused  bool
+	lyrics  lyrics.Lyrics
+	times   []time.Duration
+	lines   []string
+	total   int
 	index   int
+	scroll  bool
 }
 
 // NewLyricsWidget allocates new LyricsWidget.
-func NewLyricsWidget(app *Application) (ret *LyricsWidget) {
-	ret = &LyricsWidget{
-		TextArea: new(views.TextArea),
+func NewLyricsWidget(app *Application, quit chan struct{}) *LyricsWidget {
+	w := &LyricsWidget{
 		app:      app,
+		textArea: new(views.TextArea),
 		scroll:   false,
-		paused:   false,
+		quit:     quit,
 	}
-	ret.Init()
-	return ret
+	w.textArea.Init()
+	return w
+}
+
+func (w *LyricsWidget) Cancel() {
+	if w.toCall != nil {
+		w.toCall.Stop()
+	}
+}
+
+func (w *LyricsWidget) Update(status status.Status, lyrics lyrics.Lyrics) {
+	if status == nil || lyrics == nil {
+		return
+	}
+
+	w.lyrics = lyrics
+	w.lines = w.lyrics.Lines()
+	w.times = w.lyrics.Times()
+	w.elapsed = status.Elapsed()
+	w.total = lyrics.N()
+	w.index = lyrics.Search(w.elapsed)
+
+	if w.index < 0 || w.index >= w.total {
+		w.index = 0
+		w.total = 1
+		w.lines = make([]string, 1)
+	} else {
+		w.index--
+	}
+
+	w.update()
+}
+
+func (w *LyricsWidget) update() {
+	if w.index < 0 {
+		w.index = 0
+		w.lines = make([]string, 1)
+	}
+	w.SetLine(w.lines[w.index])
+
+	if w.index >= (w.total - 1) {
+		return
+	}
+
+	w.toCall = time.AfterFunc((w.times[w.index+1] - w.elapsed), func() {
+		w.lines = w.lyrics.Lines()
+		w.times = w.lyrics.Times()
+		w.index += 1
+		w.elapsed = w.times[w.index]
+		w.update()
+	})
+}
+
+func (w *LyricsWidget) SetLine(line string) {
+	x, y := w.view.Size()
+	offset := (x - textwidth.WidthOfString(line)) / 2
+	if offset < 0 {
+		offset = 1
+	}
+	lines := make([]string, ((y / 2) - 1), (y / 2))
+	for i := range lines {
+		lines[i] = " "
+	}
+	lines = append(lines, (strings.Repeat(" ", offset) + line))
+	w.textArea.SetLines(lines)
 }
 
 // ScrollDirection represents scroll direction for Scroll methods.
@@ -48,6 +116,14 @@ const (
 	ScrollRight = ScrollDirection(tcell.KeyRight)
 	ScrollLeft  = ScrollDirection(tcell.KeyLeft)
 )
+
+func (w *LyricsWidget) Draw() {
+	w.textArea.Draw()
+}
+
+func (w *LyricsWidget) Resize() {
+	w.textArea.Resize()
+}
 
 func (w *LyricsWidget) HandleEvent(ev tcell.Event) bool {
 	switch ev := ev.(type) {
@@ -76,81 +152,24 @@ func (w *LyricsWidget) HandleEvent(ev tcell.Event) bool {
 			}
 		}
 	}
-	return w.TextArea.HandleEvent(ev)
+	return w.textArea.HandleEvent(ev)
 }
 
 // Scroll in the direction represented by d.
 func (w *LyricsWidget) Scroll(d ScrollDirection) {
 	ev := tcell.NewEventKey(tcell.Key(d), rune(0), tcell.ModMask(0))
-	w.TextArea.HandleEvent(ev)
-}
-
-func (w *LyricsWidget) SetContent(text string) {
-	w.SetLines(strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n"))
-}
-
-func (w *LyricsWidget) SetLines(lines []string) {
-	x, _ := w.view.Size()
-
-	for i := range lines {
-		offset := (x - len(lines[i])) / 2
-		if offset < 0 {
-			lines = make([]string, 1) // empty
-			break
-		}
-		lines[i] = strings.Repeat(" ", offset+1) + lines[i] // centre line
-	}
-
-	w.TextArea.SetLines(lines)
-}
-
-func (w *LyricsWidget) Update(status status.Status, lyrics lyrics.Lyrics) {
-	if w.paused {
-		return
-	}
-
-	if status != nil && lyrics != nil {
-		if w.toCall != nil {
-			w.toCall.Stop() // cancel
-		}
-		w.lyrics = lyrics
-		w.elapsed = status.Elapsed()
-		w.index = lyrics.Search(w.elapsed) - 1
-	}
-
-	times := w.lyrics.Times()
-	lines := w.lyrics.Lines()
-
-	if w.index < 0 {
-		// blank screen
-		w.index = 0
-		lines = []string{""}
-	}
-
-	_, y := w.view.Size()
-	lines = append(make([]string, y/2), lines[w.index]) // centre line
-	w.SetLines(lines)
-
-	if w.index >= len(times)-1 {
-		return
-	}
-
-	w.toCall = time.AfterFunc(times[w.index+1]-w.elapsed, func() {
-		w.index += 1
-		w.elapsed = times[w.index]
-		w.Update(nil, nil)
-	})
+	w.textArea.HandleEvent(ev)
 }
 
 func (w *LyricsWidget) SetScroll(v bool) {
 	w.scroll = v
 }
 
-func (w *LyricsWidget) SetPaused(v bool) {
-	w.paused = v
-}
-
 func (w *LyricsWidget) SetView(view views.View) {
 	w.view = view
-	w.TextArea.SetView(view)
+	w.textArea.SetView(view)
+}
+
+func (w *LyricsWidget) Size() (int, int) {
+	return w.textArea.Size()
 }

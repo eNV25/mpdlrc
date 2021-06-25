@@ -2,12 +2,12 @@ package events
 
 import "github.com/gdamore/tcell/v2"
 
-type PlayerEvent struct {
+type PingEvent struct {
 	*event
 }
 
-func NewPlayerEvent() tcell.Event {
+func NewPingEvent() tcell.Event {
 	ev := new(event)
 	ev.setTimeNow()
-	return &PlayerEvent{ev}
+	return &PingEvent{ev}
 }

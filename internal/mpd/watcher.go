@@ -8,18 +8,23 @@ import (
 )
 
 type MPDWatcher struct {
-	watcher *mpd.Watcher
+	watcher   *mpd.Watcher
+	net, addr string
+	err       error
 }
 
 func NewMPDWatcher(net, addr string) *MPDWatcher {
-	watcher, err := mpd.NewWatcher(net, addr, "", "player")
-	if err != nil {
-		panic(err)
-	}
-	return &MPDWatcher{watcher}
+	return &MPDWatcher{net: net, addr: addr}
 }
 
 func (w *MPDWatcher) PostEvents(postEvent func(tcell.Event) error, quit <-chan struct{}) {
+	for {
+		w.watcher, w.err = mpd.NewWatcher(w.net, w.addr, "", "player")
+		if w.err == nil {
+			break
+		}
+	}
+	defer w.watcher.Close()
 	for {
 		select {
 		case <-quit:

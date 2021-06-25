@@ -40,10 +40,12 @@ func (c *MPDClient) Ping() {
 }
 
 func (c *MPDClient) Start() {
-	if client, err := mpd.Dial(c.net, c.addr); err != nil {
-		panic(err)
-	} else {
-		c.client = client
+	var err error
+	for {
+		c.client, err = mpd.Dial(c.net, c.addr)
+		if err == nil {
+			break
+		}
 	}
 }
 
@@ -57,7 +59,7 @@ func (c *MPDClient) NowPlaying() song.Song {
 		return nil
 	}
 	if attrs, err := c.client.CurrentSong(); err != nil {
-		panic(err)
+		return nil
 	} else {
 		return Song(attrs)
 	}

@@ -33,7 +33,7 @@ func NewParser(r io.Reader) *Parser {
 func (p *Parser) Parse() (*Lyrics, error) {
 	var i int
 	var tt, tmpt time.Duration
-	var ll, tmpl []byte
+	var ll, tmpl string
 	var err error
 	var ok bool
 
@@ -42,11 +42,11 @@ func (p *Parser) Parse() (*Lyrics, error) {
 
 	// loop line by line until EOF
 	for {
-		var is int
+		var rep int
 
-		ll, err = p.r.ReadSlice('\n')
+		ll, err = p.r.ReadString('\n')
 
-		ll = bytes.TrimSpace(ll)
+		ll = strings.TrimSpace(ll)
 
 		// parse same line until no match
 		for {
@@ -60,12 +60,12 @@ func (p *Parser) Parse() (*Lyrics, error) {
 			tt = tmpt
 
 			i++
-			is++
+			rep++
 			times = append(times, tt)
 		}
 
-		for x := 0; x < is; x++ {
-			lines = append(lines, string(ll))
+		for x := 0; x < rep; x++ {
+			lines = append(lines, ll)
 		}
 
 		if err == io.EOF {
@@ -82,35 +82,46 @@ func (p *Parser) Parse() (*Lyrics, error) {
 	}, nil
 }
 
-func parseLine(line []byte) (tt time.Duration, ll []byte, ok bool) {
+func isDigit(b byte) bool { return '0' <= b && b <= '9' }
+
+func parseLine(line string) (tt time.Duration, ll string, ok bool) {
 	// 0123456789
 	// [00:00.00]
-
-	if len(line) < 10 {
-		return 0, nil, false
-	}
+	// 00m00.00s
 
 	// len("[00:00.00]") => 10
 	// len("00m00.00s") => 9
 
+	if len(line) < 10 ||
+		line[0] != '[' ||
+		!isDigit(line[1]) || !isDigit(line[2]) ||
+		line[3] != ':' ||
+		!isDigit(line[4]) || !isDigit(line[5]) ||
+		line[6] != '.' ||
+		!isDigit(line[7]) || !isDigit(line[8]) ||
+		line[9] != ']' {
+
+		return 0, "", false
+	}
+
 	// [00:00.00] => 00m00.00s
-	tmp := make([]byte, 0, 9)
-	tmp = append(tmp, line[1:3]...)
-	tmp = append(tmp, 'm')
-	tmp = append(tmp, line[4:9]...)
-	tmp = append(tmp, 's')
+	var tmp strings.Builder
+	tmp.WriteString(line[1:3])
+	tmp.WriteString("m")
+	tmp.WriteString(line[4:9])
+	tmp.WriteString("s")
 
 	{
-		du, err := time.ParseDuration(string(tmp))
+		du, err := time.ParseDuration(tmp.String())
 		if err != nil {
-			return 0, nil, false
+			return 0, "", false
 		}
 
 		tt = du
 	}
 
 	{
-		ll = append(make([]byte, 0, len(line[10:])), line[10:]...)
+		ll = line[10:]
 	}
 
 	return tt, ll, true

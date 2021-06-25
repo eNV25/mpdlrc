@@ -2,12 +2,12 @@ package events
 
 import "github.com/gdamore/tcell/v2"
 
-type PlayerEvent struct {
+type DrawEvent struct {
 	*event
 }
 
-func NewPlayerEvent() tcell.Event {
+func NewDrawEvent() tcell.Event {
 	ev := new(event)
 	ev.setTimeNow()
-	return &PlayerEvent{ev}
+	return &DrawEvent{ev}
 }

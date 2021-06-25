@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/config"
@@ -11,11 +14,13 @@ import (
 )
 
 var (
-	usage = false
-	cfg   = config.DefaultConfig()
+	exitCode = 0
+	usage    = false
+	cfg      = config.DefaultConfig()
 )
 
 func init() {
+	log.SetFlags(0)
 	pflag.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override MusicDir`)
 	pflag.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override LyricsDir`)
 	pflag.StringVar(&cfg.MPD.Protocol, `mpd.protocol`, cfg.MPD.Protocol, `override MPD.Protocol (possible "unix", "tcp")`)
@@ -24,9 +29,21 @@ func init() {
 	pflag.BoolVarP(&usage, `help`, `h`, usage, `show this help message`)
 }
 
+func exit() { os.Exit(exitCode) }
+
 func main() {
-	for _, f := range config.ConfigFiles {
-		err := cfg.MergeTOMLFile(f)
+	defer exit()
+
+	if cfg.Debug {
+		logBuilder := new(strings.Builder)
+		log.SetOutput(logBuilder)
+		defer fmt.Fprint(os.Stderr, logBuilder)
+	} else {
+		log.SetOutput(io.Discard)
+	}
+
+	for _, fpath := range config.ConfigFiles {
+		err := cfg.MergeTOMLFile(fpath)
 		if err != nil {
 			switch err.(type) {
 			case *os.PathError:
@@ -41,18 +58,20 @@ func main() {
 
 	if usage {
 		pflag.Usage()
-		os.Exit(0)
+		return
 	}
 
 	cfg.Expand()
 
 	if err := cfg.Assert(); err != nil {
-		log.Fatalln(err)
+		log.Println(err)
+		exitCode = 1
+		return
 	}
 
 	if err := internal.NewApplication(cfg).Run(); err != nil {
-		log.Fatalln(err)
+		log.Println(err)
+		exitCode = 1
+		return
 	}
-
-	os.Exit(0)
 }

@@ -6,17 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type TickerEvent struct {
-	*tcell.EventTime
-}
-
-func NewTickerEvent() *TickerEvent {
-	ev := new(tcell.EventTime)
-	ev.SetEventNow()
-	return &TickerEvent{ev}
-}
-
-func PostTickerEvents(postEvent func(tcell.Event) error, t time.Duration, quit <-chan struct{}) {
+func PostTickerEvents(postEvent func(tcell.Event) error, t time.Duration, newEvent func() tcell.Event, quit <-chan struct{}) {
 	ticker := time.NewTicker(t)
 	defer ticker.Stop()
 	for {
@@ -24,7 +14,7 @@ func PostTickerEvents(postEvent func(tcell.Event) error, t time.Duration, quit <
 		case <-quit:
 			return
 		case <-ticker.C:
-			_ = postEvent(NewTickerEvent())
+			_ = postEvent(newEvent())
 		}
 	}
 }
