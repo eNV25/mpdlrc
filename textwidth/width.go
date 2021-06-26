@@ -21,15 +21,15 @@ func Width(b []byte) (n int) {
 			return -1
 		}
 
-		n += WidthOfRune(r)
+		n += WidthRune(r)
 
 		b = b[size:]
 	}
 	return n
 }
 
-// WidthOfRune returns fixed-width width of rune.
-func WidthOfRune(r rune) int {
+// WidthRune returns fixed-width width of rune.
+func WidthRune(r rune) int {
 	switch {
 	case unicode.Is(unicode.Mn, r), !unicode.IsGraphic(r):
 		return 0
@@ -45,10 +45,10 @@ func WidthOfRune(r rune) int {
 	}
 }
 
-// WidthOfString returns fixed-width width of string.
-func WidthOfString(s string) (n int) {
+// WidthString returns fixed-width width of string.
+func WidthString(s string) (n int) {
 	for _, r := range s {
-		n += WidthOfRune(r)
+		n += WidthRune(r)
 	}
 	return n
 }

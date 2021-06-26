@@ -10,9 +10,11 @@ type event struct {
 	time time.Time
 }
 
-var _ tcell.Event = (*event)(nil)
+// check
+var _ tcell.Event = event{}
+var _ tcell.Event = &event{}
 
-func (ev *event) When() time.Time {
+func (ev event) When() time.Time {
 	return ev.time
 }
 

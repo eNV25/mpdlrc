@@ -95,7 +95,7 @@ func (w *LyricsWidget) update() {
 func (w *LyricsWidget) SetLine(line string) {
 	line = width.Fold.String(line)
 	x, y := w.view.Size()
-	offset := (x - textwidth.WidthOfString(line)) / 2
+	offset := (x - textwidth.WidthString(line)) / 2
 	if offset < 0 {
 		offset = 1
 	}
