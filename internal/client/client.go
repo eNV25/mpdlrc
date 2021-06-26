@@ -11,6 +11,6 @@ type Client interface {
 	Ping()
 	Pause()
 	Play()
-	Start()
-	Stop()
+	Start() error
+	Stop() error
 }

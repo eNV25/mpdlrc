@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	var c client.Client = mpd.NewMPDClient("unix", "/run/user/1000/mpd/socket")
+	var c client.Client = mpd.NewMPDClient("unix", "/run/user/1000/mpd/socket", "")
 	defer c.Stop()
 	c.Start()
 	var ret []byte

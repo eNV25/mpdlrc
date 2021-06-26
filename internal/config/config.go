@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -18,6 +17,7 @@ type Config struct {
 	MPD struct {
 		Protocol string
 		Address  string
+		Password string
 	}
 }
 
@@ -27,6 +27,7 @@ func DefaultConfig() (cfg *Config) {
 	cfg.LyricsDir = ""
 	cfg.MPD.Protocol = "tcp"
 	cfg.MPD.Address = "localhost:6600"
+	cfg.MPD.Password = ""
 	cfg.Debug = false
 	return cfg
 }
@@ -79,10 +80,10 @@ func expandTilde(str string) string {
 // Assert return error if Config is invalid.
 func (cfg *Config) Assert() error {
 	if cfg.MusicDir == "" || cfg.MusicDir[:1] != "/" {
-		return errors.New("Invalid path in MusicDir")
+		return fmt.Errorf("Invalid path in MusicDir")
 	}
 	if cfg.LyricsDir == "" || cfg.LyricsDir[:1] != "/" {
-		return errors.New("Invalid path in LyricsDir")
+		return fmt.Errorf("Invalid path in LyricsDir")
 	}
 	return nil
 }

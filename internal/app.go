@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"time"
@@ -38,7 +39,6 @@ type Application struct {
 
 	quit   chan struct{}
 	events chan tcell.Event
-	err    error
 }
 
 // NewApplication allocates new Application from cfg.
@@ -47,11 +47,10 @@ func NewApplication(cfg *config.Config) *Application {
 		cfg:    cfg,
 		quit:   make(chan struct{}),
 		events: make(chan tcell.Event),
-		err:    nil,
 	}
 
-	app.client = mpd.NewMPDClient(cfg.MPD.Protocol, cfg.MPD.Address)
-	app.watcher = mpd.NewMPDWatcher(cfg.MPD.Protocol, cfg.MPD.Address)
+	app.client = mpd.NewMPDClient(cfg.MPD.Protocol, cfg.MPD.Address, cfg.MPD.Password)
+	app.watcher = mpd.NewMPDWatcher(cfg.MPD.Protocol, cfg.MPD.Address, cfg.MPD.Password)
 
 	app.lyricsw = NewLyricsWidget(app, app.quit)
 	app.focused = app.lyricsw
@@ -158,15 +157,25 @@ func (app *Application) Quit() {
 
 // Run the application.
 func (app *Application) Run() error {
-	app.Screen, app.err = tcell.NewScreen()
+	var err error
 
-	if app.err != nil {
-		close(app.quit)
-		goto end
+	app.Screen, err = tcell.NewScreen()
+	if err != nil {
+		err = fmt.Errorf("new screen: %w", err)
+		goto quit
 	}
 
-	app.Screen.Init()
-	app.client.Start()
+	err = app.Screen.Init()
+	if err != nil {
+		err = fmt.Errorf("init screen: %w", err)
+		goto quit
+	}
+
+	err = app.client.Start()
+	if err != nil {
+		err = fmt.Errorf("starting client: %w", err)
+		goto quit
+	}
 
 	defer app.client.Stop()
 	defer app.Screen.Fini()
@@ -189,12 +198,14 @@ func (app *Application) Run() error {
 
 		select {
 		case <-app.quit:
-			goto end
+			goto rtrn
 		case ev := <-app.events:
 			app.HandleEvent(ev)
 		}
 	}
 
-end:
-	return app.err
+quit:
+	close(app.quit)
+rtrn:
+	return err
 }
