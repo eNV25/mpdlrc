@@ -9,7 +9,6 @@ import (
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/internal/events"
-	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/mpd"
 	"github.com/env25/mpdlrc/internal/song"
 	"github.com/env25/mpdlrc/internal/state"
@@ -30,7 +29,6 @@ type Application struct {
 	watcher client.Watcher
 	song    song.Song
 	status  status.Status
-	lyrics  lyrics.Lyrics
 	cfg     *config.Config
 
 	focused widget.Widget
@@ -66,16 +64,17 @@ func (app *Application) Draw() {
 // Update subwidgets after querying information from client.
 func (app *Application) Update() {
 	app.song = app.client.NowPlaying()
-	app.lyrics = app.Lyrics(app.song)
 	app.status = app.client.Status()
+
 	app.lyricsw.Cancel()
 	switch app.status.State() {
 	case state.PlayState:
-		app.lyricsw.Update(app.status, app.lyrics)
+		times, lines := app.Lyrics(app.song)
+		app.lyricsw.Update(app.status, times, lines)
 	}
 }
 
-// Resize does resize actions.
+// Resize is run after a resize event.
 func (app *Application) Resize() {
 	app.SetView(app.Screen)
 	app.lyricsw.Resize()
@@ -133,18 +132,18 @@ func (app *Application) SetView(view views.View) {
 }
 
 // Lyrics fetches lyrics using information from song.
-func (app *Application) Lyrics(song song.Song) lyrics.Lyrics {
+func (app *Application) Lyrics(song song.Song) ([]time.Duration, []string) {
 	if r, err := os.Open(
 		path.Join(app.cfg.LyricsDir, app.song.LRCFile()),
 	); err != nil {
 		// TODO: better error messages
-		return lrc.NewLyrics(make([]time.Duration, 1), make([]string, 1)) // blank screen
+		return make([]time.Duration, 1), make([]string, 1) // blank screen
 	} else {
-		if l, err := lrc.NewParser(r).Parse(); err != nil {
+		if times, lines, err := lrc.NewParser(r).Parse(); err != nil {
 			// TODO: better error messages
-			return lrc.NewLyrics(make([]time.Duration, 1), make([]string, 1)) // blank screen
+			return make([]time.Duration, 1), make([]string, 1) // blank screen
 		} else {
-			return l
+			return times, lines
 		}
 	}
 }

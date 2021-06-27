@@ -20,7 +20,7 @@ var stringwidthtests = []struct {
 
 func BenchmarkStringWidth(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		WidthString(stringwidthtests[i%len(stringwidthtests)].in)
+		StringWidth(stringwidthtests[i%len(stringwidthtests)].in)
 	}
 }
 
@@ -32,8 +32,8 @@ func BenchmarkStringWidthOriginal(b *testing.B) {
 
 func TestStringWidth(t *testing.T) {
 	for _, tt := range stringwidthtests {
-		if out := WidthString(tt.in); out != tt.out {
-			t.Errorf("WidthString(%q) = %d, want %d", tt.in, out, tt.out)
+		if out := StringWidth(tt.in); out != tt.out {
+			t.Errorf("StringWidth(%q) = %d, want %d", tt.in, out, tt.out)
 		}
 	}
 	//c := runewidth.NewCondition()
@@ -107,7 +107,7 @@ var runewidthtests = []struct {
 
 func BenchmarkRuneWidth(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		WidthRune(runewidthtests[i%len(runewidthtests)].in)
+		RuneWidth(runewidthtests[i%len(runewidthtests)].in)
 	}
 }
 
@@ -119,8 +119,8 @@ func BenchmarkRuneWidthOriginal(b *testing.B) {
 
 func TestRuneWidth(t *testing.T) {
 	for i, tt := range runewidthtests {
-		if out := WidthRune(tt.in); out != tt.out {
-			t.Errorf("case %d: WidthRune(%q) = %d, want %d", i, tt.in, out, tt.out)
+		if out := RuneWidth(tt.in); out != tt.out {
+			t.Errorf("case %d: RuneWidth(%q) = %d, want %d", i, tt.in, out, tt.out)
 		}
 	}
 	//c := runewidth.NewCondition()

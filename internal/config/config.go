@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -80,10 +81,10 @@ func expandTilde(str string) string {
 // Assert return error if Config is invalid.
 func (cfg *Config) Assert() error {
 	if cfg.MusicDir == "" || cfg.MusicDir[:1] != "/" {
-		return fmt.Errorf("Invalid path in MusicDir")
+		return errors.New("Invalid path in MusicDir")
 	}
 	if cfg.LyricsDir == "" || cfg.LyricsDir[:1] != "/" {
-		return fmt.Errorf("Invalid path in LyricsDir")
+		return errors.New("Invalid path in LyricsDir")
 	}
 	return nil
 }

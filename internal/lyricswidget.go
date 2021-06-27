@@ -1,10 +1,10 @@
 package internal
 
 import (
+	"sort"
 	"strings"
 	"time"
 
-	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/status"
 	"github.com/env25/mpdlrc/textwidth"
 	"golang.org/x/text/width"
@@ -24,7 +24,6 @@ type LyricsWidget struct {
 
 	toCall  *time.Timer
 	elapsed time.Duration
-	lyrics  lyrics.Lyrics
 	times   []time.Duration
 	lines   []string
 	total   int
@@ -50,18 +49,17 @@ func (w *LyricsWidget) Cancel() {
 	}
 }
 
-func (w *LyricsWidget) Update(status status.Status, lyrics lyrics.Lyrics) {
-	if status == nil || lyrics == nil {
+func (w *LyricsWidget) Update(status status.Status, times []time.Duration, lines []string) {
+	if status == nil || times == nil || lines == nil {
 		return
 	}
 
-	w.lyrics = lyrics
-	w.lines = lyrics.Lines()
-	w.times = lyrics.Times()
-	w.total = lyrics.N()
+	w.lines = lines
+	w.times = times
+	w.total = len(lines)
 
 	w.elapsed = status.Elapsed()
-	w.index = lyrics.Search(w.elapsed)
+	w.index = sort.Search(w.total, func(i int) bool { return w.times[i] >= w.elapsed })
 
 	if w.index < 0 || w.index >= w.total {
 		w.index = 0
@@ -95,7 +93,7 @@ func (w *LyricsWidget) update() {
 func (w *LyricsWidget) SetLine(line string) {
 	line = width.Fold.String(line)
 	x, y := w.view.Size()
-	offset := (x - textwidth.WidthString(line)) / 2
+	offset := (x - textwidth.StringWidth(line)) / 2
 	if offset < 0 {
 		offset = 1
 	}

@@ -9,12 +9,12 @@ import (
 )
 
 // Parse parses a byte slice of LRC lyrics.
-func Parse(data []byte) (*Lyrics, error) {
+func Parse(data []byte) ([]time.Duration, []string, error) {
 	return NewParser(bytes.NewReader(data)).Parse()
 }
 
 // ParseString parses a string of LRC lyrics.
-func ParseString(text string) (*Lyrics, error) {
+func ParseString(text string) ([]time.Duration, []string, error) {
 	return NewParser(strings.NewReader(text)).Parse()
 }
 
@@ -30,7 +30,7 @@ func NewParser(r io.Reader) *Parser {
 
 // Parse parses the reader according to the LRC format.
 // https://en.wikipedia.org/wiki/LRC_(file_format)
-func (p *Parser) Parse() (*Lyrics, error) {
+func (p *Parser) Parse() ([]time.Duration, []string, error) {
 	var i int
 	var tt, tmpt time.Duration
 	var ll, tmpl string
@@ -71,20 +71,16 @@ func (p *Parser) Parse() (*Lyrics, error) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return &Lyrics{
-		i:     i,
-		lines: lines,
-		times: times,
-	}, nil
+	return times, lines, nil
 }
 
 func isDigit(b byte) bool { return '0' <= b && b <= '9' }
 
-func parseLine(line string) (tt time.Duration, ll string, ok bool) {
+func parseLine(line string) (time.Duration, string, bool) {
 	// 0123456789
 	// [00:00.00]
 	// 00m00.00s
@@ -111,18 +107,12 @@ func parseLine(line string) (tt time.Duration, ll string, ok bool) {
 	tmp.WriteString(line[4:9])
 	tmp.WriteString("s")
 
-	{
-		du, err := time.ParseDuration(tmp.String())
-		if err != nil {
-			return 0, "", false
-		}
-
-		tt = du
+	tt, err := time.ParseDuration(tmp.String())
+	if err != nil {
+		return 0, "", false
 	}
 
-	{
-		ll = line[10:]
-	}
+	ll := line[10:]
 
 	return tt, ll, true
 }

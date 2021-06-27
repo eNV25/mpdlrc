@@ -1,13 +1,17 @@
 package mpd
 
 import (
-	"fmt"
+	"errors"
 	"sync/atomic"
 
 	"github.com/env25/mpdlrc/internal/song"
 	"github.com/env25/mpdlrc/internal/status"
 
 	"github.com/fhs/gompd/v2/mpd"
+)
+
+var (
+	ErrAlreadyClosed = errors.New("already closed")
 )
 
 type MPDClient struct {
@@ -60,7 +64,7 @@ func (c *MPDClient) Ping() {
 
 func (c *MPDClient) Stop() error {
 	if !c.setClosed() {
-		return fmt.Errorf("already closed")
+		return ErrAlreadyClosed
 	}
 	return c.client.Close()
 }
