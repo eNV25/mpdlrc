@@ -34,14 +34,6 @@ func exit() { os.Exit(exitCode) }
 func main() {
 	defer exit()
 
-	if cfg.Debug {
-		logBuilder := new(strings.Builder)
-		log.SetOutput(logBuilder)
-		defer fmt.Fprint(os.Stderr, logBuilder)
-	} else {
-		log.SetOutput(io.Discard)
-	}
-
 	for _, fpath := range config.ConfigFiles {
 		err := cfg.MergeTOMLFile(fpath)
 		if err != nil {
@@ -59,6 +51,14 @@ func main() {
 	if usage {
 		pflag.Usage()
 		return
+	}
+
+	if cfg.Debug {
+		logBuilder := new(strings.Builder)
+		log.SetOutput(logBuilder)
+		defer fmt.Fprint(os.Stderr, logBuilder)
+	} else {
+		log.SetOutput(io.Discard)
 	}
 
 	cfg.Expand()

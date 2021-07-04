@@ -31,9 +31,11 @@ type Application struct {
 	status  status.Status
 	cfg     *config.Config
 
-	focused widget.Widget
-	lyricsv *views.ViewPort
-	lyricsw *LyricsWidget
+	focused   widget.Widget
+	lyricsv   *views.ViewPort
+	lyricsw   *LyricsWidget
+	progressv *views.ViewPort
+	progressw *ProgressWidget
 
 	quit   chan struct{}
 	events chan tcell.Event
@@ -51,6 +53,7 @@ func NewApplication(cfg *config.Config) *Application {
 	app.watcher = mpd.NewMPDWatcher(cfg.MPD.Protocol, cfg.MPD.Address, cfg.MPD.Password)
 
 	app.lyricsw = NewLyricsWidget(app, app.quit)
+	app.progressw = NewProgressWidget(app, app.quit)
 	app.focused = app.lyricsw
 
 	return app
@@ -58,6 +61,7 @@ func NewApplication(cfg *config.Config) *Application {
 
 // Draw implements the root Widget.
 func (app *Application) Draw() {
+	app.progressw.Draw()
 	app.lyricsw.Draw()
 }
 
@@ -66,9 +70,11 @@ func (app *Application) Update() {
 	app.song = app.client.NowPlaying()
 	app.status = app.client.Status()
 
+	app.progressw.Cancel()
 	app.lyricsw.Cancel()
 	switch app.status.State() {
 	case state.PlayState:
+		app.progressw.Update(app.status)
 		times, lines := app.Lyrics(app.song)
 		app.lyricsw.Update(app.status, times, lines)
 	}
@@ -77,6 +83,7 @@ func (app *Application) Update() {
 // Resize is run after a resize event.
 func (app *Application) Resize() {
 	app.SetView(app.Screen)
+	app.progressw.Resize()
 	app.lyricsw.Resize()
 }
 
@@ -85,6 +92,9 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 	switch ev := ev.(type) {
 	case *tcell.EventKey:
 		switch ev.Key() {
+		case tcell.KeyCtrlL:
+			// fake resize event
+			return app.HandleEvent(tcell.NewEventResize(app.Size()))
 		case tcell.KeyCtrlC, tcell.KeyEscape:
 			app.Quit()
 			return true
@@ -100,14 +110,13 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 	case *tcell.EventResize:
 		app.Resize()
 		app.Update()
+		app.Screen.Fill(' ', tcell.StyleDefault)
+		app.Screen.Sync()
 		app.Draw()
-		app.Sync()
+		app.Screen.Sync()
 		return true
 	case *events.PlayerEvent:
 		app.Update()
-		app.Draw()
-		return true
-	case *events.DrawEvent:
 		app.Draw()
 		return true
 	case *events.PingEvent:
@@ -128,7 +137,14 @@ func (app *Application) PostFunc(fn func()) error {
 
 // SetView updates the views of subwidgets.
 func (app *Application) SetView(view views.View) {
-	app.lyricsw.SetView(view)
+	if app.lyricsv == nil {
+		app.progressv = views.NewViewPort(view, 0, 0, 0, 0)
+		app.progressw.SetView(app.progressv)
+		app.lyricsv = views.NewViewPort(view, 0, 0, 0, 0)
+		app.lyricsw.SetView(app.lyricsv)
+	}
+	app.progressv.Resize(0, 0, -1, 1)
+	app.lyricsv.Resize(0, 1, -1, -1)
 }
 
 // Lyrics fetches lyrics using information from song.
@@ -185,9 +201,6 @@ func (app *Application) Run() error {
 	go app.Screen.ChannelEvents(app.events, app.quit)
 	go app.watcher.PostEvents(
 		app.PostEvent, app.quit)
-	go events.PostTickerEvents(
-		app.PostEvent, 1*time.Second,
-		events.NewDrawEvent, app.quit)
 	go events.PostTickerEvents(
 		app.PostEvent, 5*time.Second,
 		events.NewPingEvent, app.quit)
