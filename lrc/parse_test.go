@@ -7,8 +7,9 @@ import (
 )
 
 var testCases = []struct {
-	lrc    string
-	lyrics *Lyrics
+	lrc   string
+	times []time.Duration
+	lines []string
 }{
 	{
 		`
@@ -16,18 +17,15 @@ var testCases = []struct {
 [00:17.20]Line 2 lyrics
 [00:21.10]Line 3 lyrics
 		`,
-		&Lyrics{
-			i: 3,
-			times: []time.Duration{
-				parseDuration("00m12.00s"),
-				parseDuration("00m17.20s"),
-				parseDuration("00m21.10s"),
-			},
-			lines: []string{
-				"Line 1 lyrics",
-				"Line 2 lyrics",
-				"Line 3 lyrics",
-			},
+		[]time.Duration{
+			parseDuration("00m12.00s"),
+			parseDuration("00m17.20s"),
+			parseDuration("00m21.10s"),
+		},
+		[]string{
+			"Line 1 lyrics",
+			"Line 2 lyrics",
+			"Line 3 lyrics",
 		},
 	},
 	{
@@ -36,24 +34,21 @@ var testCases = []struct {
 [00:17.20]Line 2 lyrics
 [00:21.10][00:22.00]Line 3 lyrics
 		`,
-		&Lyrics{
-			i: 6,
-			times: []time.Duration{
-				parseDuration("00m12.00s"),
-				parseDuration("00m13.00s"),
-				parseDuration("00m14.00s"),
-				parseDuration("00m17.20s"),
-				parseDuration("00m21.10s"),
-				parseDuration("00m22.00s"),
-			},
-			lines: []string{
-				"Line 1 lyrics",
-				"Line 1 lyrics",
-				"Line 1 lyrics",
-				"Line 2 lyrics",
-				"Line 3 lyrics",
-				"Line 3 lyrics",
-			},
+		[]time.Duration{
+			parseDuration("00m12.00s"),
+			parseDuration("00m13.00s"),
+			parseDuration("00m14.00s"),
+			parseDuration("00m17.20s"),
+			parseDuration("00m21.10s"),
+			parseDuration("00m22.00s"),
+		},
+		[]string{
+			"Line 1 lyrics",
+			"Line 1 lyrics",
+			"Line 1 lyrics",
+			"Line 2 lyrics",
+			"Line 3 lyrics",
+			"Line 3 lyrics",
 		},
 	},
 }
@@ -65,9 +60,9 @@ func parseDuration(text string) (du time.Duration) {
 
 func TestParseString(t *testing.T) {
 	for _, cs := range testCases {
-		l, err := ParseString(cs.lrc)
-		if err != nil || !reflect.DeepEqual(l, cs.lyrics) {
-			t.Errorf("ParseString(%q) != %v, got = %v", cs.lrc, cs.lyrics, l)
+		times, lines, err := ParseString(cs.lrc)
+		if err != nil || !reflect.DeepEqual(times, cs.times) || !reflect.DeepEqual(lines, cs.lines) {
+			t.Errorf("ParseString(%q) != %v, %v, got = %v, %v", cs.lrc, cs.times, cs.lines, times, lines)
 		}
 	}
 }
