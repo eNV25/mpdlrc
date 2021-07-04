@@ -28,6 +28,10 @@ func Width(b []byte) (n int) {
 	return n
 }
 
+func ByteWidth(b byte) int {
+	return RuneWidth(rune(b))
+}
+
 // RuneWidth returns fixed-width width of rune.
 func RuneWidth(r rune) int {
 	switch {
