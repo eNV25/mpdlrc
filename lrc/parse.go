@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // Parse parses a byte slice of LRC lyrics.
@@ -46,7 +47,7 @@ func (p *Parser) Parse() ([]time.Duration, []string, error) {
 
 		ll, err = p.r.ReadString('\n')
 
-		ll = strings.TrimSpace(ll)
+		ll = strings.TrimRightFunc(ll, unicode.IsSpace)
 
 		// parse same line until no match
 		for {
