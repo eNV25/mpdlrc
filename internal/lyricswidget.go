@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/env25/mpdlrc/internal/status"
-	"github.com/env25/mpdlrc/textwidth"
 	"golang.org/x/text/width"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
+	"github.com/neeharvi/textwidth"
 )
 
 // LyricsWidget is a Widget implementation.
