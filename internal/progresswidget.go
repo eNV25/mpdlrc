@@ -47,12 +47,20 @@ func (w *ProgressWidget) Cancel() {
 	}
 }
 
-func (w *ProgressWidget) Update(status status.Status) {
+func (w *ProgressWidget) Update(playing bool, status status.Status) {
 	w.elapsed = status.Elapsed()
 	w.duration = status.Duration() / time.Duration(w.totalX)
 	w.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * w.duration) >= w.elapsed }) - 1
 
-	w.update()
+	if w.elapsedX >= (w.totalX - 1) {
+		return
+	}
+
+	if playing {
+		w.update()
+	} else {
+		w.elapsed += 1
+	}
 }
 
 func (w *ProgressWidget) update() {
@@ -64,9 +72,7 @@ func (w *ProgressWidget) update() {
 
 	w.toCall = time.AfterFunc(w.duration, func() {
 		w.update()
-		w.app.PostFunc(func() {
-			w.app.Draw()
-		})
+		w.app.PostFunc(func() { w.app.Draw() })
 	})
 }
 

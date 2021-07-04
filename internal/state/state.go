@@ -1,10 +1,10 @@
 package state
 
-type State uint32
+type State uint
 
 const (
-	_ State = iota
-	PlayState
-	StopState
-	PauseState
+	none State = iota
+	Play
+	Stop
+	Pause
 )

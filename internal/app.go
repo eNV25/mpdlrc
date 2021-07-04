@@ -72,12 +72,22 @@ func (app *Application) Update() {
 
 	app.progressw.Cancel()
 	app.lyricsw.Cancel()
+
+	var playing bool
+
 	switch app.status.State() {
-	case state.PlayState:
-		app.progressw.Update(app.status)
-		times, lines := app.Lyrics(app.song)
-		app.lyricsw.Update(app.status, times, lines)
+	case state.Play:
+		playing = true
+	case state.Pause:
+		playing = false
+	default:
+		// nothing to do
+		return
 	}
+
+	app.progressw.Update(playing, app.status)
+	times, lines := app.Lyrics(app.song)
+	app.lyricsw.Update(playing, app.status, times, lines)
 }
 
 // Resize is run after a resize event.

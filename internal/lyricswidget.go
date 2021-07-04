@@ -49,7 +49,7 @@ func (w *LyricsWidget) Cancel() {
 	}
 }
 
-func (w *LyricsWidget) Update(status status.Status, times []time.Duration, lines []string) {
+func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.Duration, lines []string) {
 	if status == nil || times == nil || lines == nil {
 		return
 	}
@@ -69,7 +69,19 @@ func (w *LyricsWidget) Update(status status.Status, times []time.Duration, lines
 		w.index -= 1
 	}
 
-	w.update()
+	if w.index >= (w.total - 1) {
+		return
+	}
+
+	if playing {
+		w.update()
+	} else {
+		if w.index < 0 {
+			w.SetLine("")
+		} else {
+			w.SetLine(w.lines[w.index])
+		}
+	}
 }
 
 func (w *LyricsWidget) update() {

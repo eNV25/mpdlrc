@@ -25,11 +25,11 @@ func secondStringToDuration(str string) time.Duration {
 func (s Status) State() state.State {
 	switch s["state"] {
 	case "play":
-		return state.PlayState
+		return state.Play
 	case "stop":
-		return state.StopState
+		return state.Stop
 	case "pause":
-		return state.PauseState
+		return state.Pause
 	}
 	return 0
 }
