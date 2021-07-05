@@ -176,7 +176,6 @@ func (app *Application) Lyrics(song song.Song) ([]time.Duration, []string) {
 
 // Quit the application.
 func (app *Application) Quit() {
-	// NOTE: put all shutdown actions under the select case
 	close(app.quit)
 }
 
@@ -202,6 +201,13 @@ func (app *Application) Run() error {
 		goto quit
 	}
 
+	err = app.watcher.Start()
+	if err != nil {
+		err = fmt.Errorf("starting watcher: %w", err)
+		goto quit
+	}
+
+	defer app.watcher.Stop()
 	defer app.client.Stop()
 	defer app.Screen.Fini()
 

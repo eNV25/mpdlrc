@@ -72,7 +72,7 @@ func (w *ProgressWidget) update() {
 
 	w.toCall = time.AfterFunc(w.duration, func() {
 		w.update()
-		w.app.PostFunc(func() { w.app.Draw() })
+		w.app.PostFunc(w.app.Draw)
 	})
 }
 

@@ -15,12 +15,15 @@ func NewMPDWatcher(net, addr, password string) *MPDWatcher {
 	return &MPDWatcher{net: net, addr: addr, password: password}
 }
 
-func (w *MPDWatcher) PostEvents(postEvent func(tcell.Event) error, quit <-chan struct{}) {
+func (w *MPDWatcher) Start() (err error) {
 	subsystems := []string{"player"}
+	w.watcher, err = mpd.NewWatcher(w.net, w.addr, w.password, subsystems...)
+	return
+}
 
-	w.watcher, _ = mpd.NewWatcher(w.net, w.addr, w.password, subsystems...)
-	defer w.watcher.Close()
+func (w *MPDWatcher) Stop() error { return w.watcher.Close() }
 
+func (w *MPDWatcher) PostEvents(postEvent func(tcell.Event) error, quit <-chan struct{}) {
 	var newEvent (func() tcell.Event)
 
 	for {

@@ -99,7 +99,7 @@ func (w *LyricsWidget) update() {
 		w.index += 1
 		w.elapsed = w.times[w.index]
 		w.update()
-		w.app.PostFunc(func() { w.app.Draw() })
+		w.app.PostFunc(w.app.Draw)
 	})
 }
 
