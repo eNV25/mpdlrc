@@ -23,8 +23,9 @@ func init() {
 	log.SetFlags(0)
 	pflag.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override MusicDir`)
 	pflag.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override LyricsDir`)
-	pflag.StringVar(&cfg.MPD.Protocol, `mpd.protocol`, cfg.MPD.Protocol, `override MPD.Protocol (possible "unix", "tcp")`)
-	pflag.StringVar(&cfg.MPD.Address, `mpd.address`, cfg.MPD.Address, `override MPD.Address (use unix socket path or "host:port")`)
+	pflag.StringVar(&cfg.MPD.Connection, `mpd-connection`, cfg.MPD.Connection, `override MPD.Connection (possible "unix", "tcp")`)
+	pflag.StringVar(&cfg.MPD.Address, `mpd-address`, cfg.MPD.Address, `override MPD.Address (use unix socket path or "host:port")`)
+	pflag.StringVar(&cfg.MPD.Password, `mpd-password`, cfg.MPD.Password, `override MPD.Password`)
 	pflag.BoolVar(&cfg.Debug, `debug`, cfg.Debug, `enable debug`)
 	pflag.BoolVarP(&usage, `help`, `h`, usage, `show this help message`)
 }
@@ -41,7 +42,7 @@ func main() {
 			case *os.PathError:
 				// no-op
 			default:
-				log.Println(err)
+				fmt.Fprintln(os.Stderr, err)
 			}
 		}
 	}
@@ -64,13 +65,13 @@ func main() {
 	cfg.Expand()
 
 	if err := cfg.Assert(); err != nil {
-		log.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		exitCode = 1
 		return
 	}
 
 	if err := internal.NewApplication(cfg).Run(); err != nil {
-		log.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		exitCode = 1
 		return
 	}

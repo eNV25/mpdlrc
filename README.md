@@ -30,7 +30,7 @@ MusicDir = "$HOME/Music"
 LyricsDir = "$HOME/Music"
 
 [MPD]
-Protocol = "unix"
+Connection = "unix"
 Address = "${XDG_RUNTIME_DIR}/mpd/socket"
 ```
 

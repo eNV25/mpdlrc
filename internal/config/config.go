@@ -16,9 +16,9 @@ type Config struct {
 	Debug     bool
 
 	MPD struct {
-		Protocol string
-		Address  string
-		Password string
+		Connection string
+		Address    string
+		Password   string
 	}
 }
 
@@ -26,7 +26,7 @@ func DefaultConfig() (cfg *Config) {
 	cfg = new(Config)
 	cfg.MusicDir = "~/Music"
 	cfg.LyricsDir = ""
-	cfg.MPD.Protocol = "tcp"
+	cfg.MPD.Connection = "tcp"
 	cfg.MPD.Address = "localhost:6600"
 	cfg.MPD.Password = ""
 	cfg.Debug = false

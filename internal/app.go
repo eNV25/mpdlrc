@@ -49,8 +49,8 @@ func NewApplication(cfg *config.Config) *Application {
 		events: make(chan tcell.Event),
 	}
 
-	app.client = mpd.NewMPDClient(cfg.MPD.Protocol, cfg.MPD.Address, cfg.MPD.Password)
-	app.watcher = mpd.NewMPDWatcher(cfg.MPD.Protocol, cfg.MPD.Address, cfg.MPD.Password)
+	app.client = mpd.NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
+	app.watcher = mpd.NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 
 	app.lyricsw = NewLyricsWidget(app, app.quit)
 	app.progressw = NewProgressWidget(app, app.quit)

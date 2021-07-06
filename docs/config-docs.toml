@@ -1,27 +1,21 @@
 
-# MusicDir is where your music is kept. Environment variables can be used.
-#
-#  default: "$HOME/Music"
-#
+# Form:
+#  {{ option name }} = {{ default value }}
+
+# MusicDir is where your music is kept. Environment variables and tilde "~" can be used.
 MusicDir = "$HOME/Music"
 
-# LyricsDir is where your lyrics are kept. Environment variables can be used.
-#
-#  default: "$HOME/Music"
-#
+# LyricsDir is where your lyrics are kept. Environment variables and tilde "~" can be used.
 LyricsDir = "$HOME/Music"
 
 # MPD section.
 [MPD]
 
-# Protocol can be "unix" or "tcp" depending on how you configured mpd.
-#
-#  default: "tcp"
-#
-Protocol = "unix"
+# Connection can be "unix" or "tcp" depending on how you configured mpd.
+Connection = "tcp"
 
-# Address is path to unix socket or tcp "host:port". Environment variables can be used.
-#
-#  default: "localhost:6600"
-#
-Address = "${XDG_RUNTIME_DIR}/mpd/socket"
+# Address is path to unix socket or tcp "host:port". Environment variables and tilde "~" can be used.
+Address = "localhost:6600"
+
+# Password is the password set up in MPD. An empty string is no password.
+Password = ""
