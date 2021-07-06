@@ -1,0 +1,27 @@
+
+# MusicDir is where your music is kept. Environment variables can be used.
+#
+#  default: "$HOME/Music"
+#
+MusicDir = "$HOME/Music"
+
+# LyricsDir is where your lyrics are kept. Environment variables can be used.
+#
+#  default: "$HOME/Music"
+#
+LyricsDir = "$HOME/Music"
+
+# MPD section.
+[MPD]
+
+# Protocol can be "unix" or "tcp" depending on how you configured mpd.
+#
+#  default: "tcp"
+#
+Protocol = "unix"
+
+# Address is path to unix socket or tcp "host:port". Environment variables can be used.
+#
+#  default: "localhost:6600"
+#
+Address = "${XDG_RUNTIME_DIR}/mpd/socket"
