@@ -1,4 +1,4 @@
-package events
+package event
 
 import (
 	"time"
@@ -6,10 +6,10 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type DrawEvent struct {
+type Draw struct {
 	event
 }
 
 func NewDrawEvent() tcell.Event {
-	return &DrawEvent{event{when: time.Now()}}
+	return &Draw{event{when: time.Now()}}
 }

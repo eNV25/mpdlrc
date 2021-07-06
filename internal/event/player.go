@@ -1,4 +1,4 @@
-package events
+package event
 
 import (
 	"time"
@@ -6,10 +6,10 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type PlayerEvent struct {
+type Player struct {
 	event
 }
 
 func NewPlayerEvent() tcell.Event {
-	return &PlayerEvent{event{when: time.Now()}}
+	return &Player{event{when: time.Now()}}
 }

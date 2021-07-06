@@ -1,4 +1,4 @@
-package events
+package event
 
 import (
 	"time"
@@ -6,12 +6,12 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type FunctionEvent struct {
+type Function struct {
 	event
 
 	Run func()
 }
 
 func NewFunctionEvent(fn func()) tcell.Event {
-	return &FunctionEvent{event{when: time.Now()}, fn}
+	return &Function{event{when: time.Now()}, fn}
 }

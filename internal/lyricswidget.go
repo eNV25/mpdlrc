@@ -5,22 +5,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/env25/mpdlrc/internal/status"
-	"golang.org/x/text/width"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
 	"github.com/neeharvi/textwidth"
+	"golang.org/x/text/width"
+
+	"github.com/env25/mpdlrc/internal/status"
 )
 
 // LyricsWidget is a Widget implementation.
 type LyricsWidget struct {
-	app *Application
+	postFunc func(fn func()) error
 
 	view     views.View
 	textArea *views.TextArea
-
-	quit chan struct{}
 
 	toCall  *time.Timer
 	elapsed time.Duration
@@ -32,12 +30,11 @@ type LyricsWidget struct {
 }
 
 // NewLyricsWidget allocates new LyricsWidget.
-func NewLyricsWidget(app *Application, quit chan struct{}) *LyricsWidget {
+func NewLyricsWidget(postFunc func(fn func()) error) *LyricsWidget {
 	w := &LyricsWidget{
-		app:      app,
+		postFunc: postFunc,
 		textArea: new(views.TextArea),
 		scroll:   false,
-		quit:     quit,
 	}
 	w.textArea.Init()
 	return w
@@ -82,6 +79,7 @@ func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.D
 			w.SetLine(w.lines[w.index])
 		}
 	}
+	w.postFunc(w.Draw)
 }
 
 func (w *LyricsWidget) update() {
@@ -99,7 +97,7 @@ func (w *LyricsWidget) update() {
 		w.index += 1
 		w.elapsed = w.times[w.index]
 		w.update()
-		w.app.PostFunc(w.app.Draw)
+		w.postFunc(w.Draw)
 	})
 }
 

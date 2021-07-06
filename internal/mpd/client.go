@@ -4,10 +4,10 @@ import (
 	"errors"
 	"sync/atomic"
 
+	"github.com/fhs/gompd/v2/mpd"
+
 	"github.com/env25/mpdlrc/internal/song"
 	"github.com/env25/mpdlrc/internal/status"
-
-	"github.com/fhs/gompd/v2/mpd"
 )
 
 var (

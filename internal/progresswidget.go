@@ -4,14 +4,14 @@ import (
 	"sort"
 	"time"
 
-	"github.com/env25/mpdlrc/internal/status"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
+
+	"github.com/env25/mpdlrc/internal/status"
 )
 
 type ProgressWidget struct {
-	app *Application
+	postFunc func(fn func()) error
 
 	view views.View
 
@@ -27,11 +27,10 @@ type ProgressWidget struct {
 	styles   [3]tcell.Style
 }
 
-func NewProgressWidget(app *Application, quit chan struct{}) *ProgressWidget {
+func NewProgressWidget(postFunc func(fn func()) error) *ProgressWidget {
 	w := &ProgressWidget{
-		app:   app,
-		quit:  quit,
-		runes: [3]rune{'=', '>', ' '},
+		postFunc: postFunc,
+		runes:    [3]rune{'=', '>', ' '},
 		styles: [3]tcell.Style{
 			tcell.StyleDefault.Bold(true),
 			tcell.StyleDefault.Bold(true),
@@ -50,7 +49,7 @@ func (w *ProgressWidget) Cancel() {
 func (w *ProgressWidget) Update(playing bool, status status.Status) {
 	w.elapsed = status.Elapsed()
 	w.duration = status.Duration() / time.Duration(w.totalX)
-	w.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * w.duration) >= w.elapsed }) - 1
+	w.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * w.duration) >= w.elapsed })
 
 	if w.elapsedX >= w.totalX {
 		return
@@ -58,9 +57,8 @@ func (w *ProgressWidget) Update(playing bool, status status.Status) {
 
 	if playing {
 		w.update()
-	} else {
-		w.elapsed += 1
 	}
+	w.postFunc(w.Draw)
 }
 
 func (w *ProgressWidget) update() {
@@ -68,11 +66,10 @@ func (w *ProgressWidget) update() {
 		return
 	}
 
-	w.elapsedX += 1
-
 	w.toCall = time.AfterFunc(w.duration, func() {
+		w.elapsedX += 1
 		w.update()
-		w.app.PostFunc(w.app.Draw)
+		w.postFunc(w.Draw)
 	})
 }
 

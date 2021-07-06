@@ -6,18 +6,18 @@ import (
 	"path"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
+	"github.com/gdamore/tcell/v2/views"
+
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
-	"github.com/env25/mpdlrc/internal/events"
+	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/mpd"
 	"github.com/env25/mpdlrc/internal/song"
 	"github.com/env25/mpdlrc/internal/state"
 	"github.com/env25/mpdlrc/internal/status"
 	"github.com/env25/mpdlrc/internal/widget"
 	"github.com/env25/mpdlrc/lrc"
-
-	"github.com/gdamore/tcell/v2"
-	"github.com/gdamore/tcell/v2/views"
 )
 
 // Application struct. It embeds and overrides views.Application. It also implemets views.Widget
@@ -25,11 +25,13 @@ import (
 type Application struct {
 	tcell.Screen
 
+	cfg *config.Config
+
 	client  client.Client
 	watcher client.Watcher
 	song    song.Song
 	status  status.Status
-	cfg     *config.Config
+	playing bool
 
 	focused   widget.Widget
 	lyricsv   *views.ViewPort
@@ -52,17 +54,11 @@ func NewApplication(cfg *config.Config) *Application {
 	app.client = mpd.NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 	app.watcher = mpd.NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 
-	app.lyricsw = NewLyricsWidget(app, app.quit)
-	app.progressw = NewProgressWidget(app, app.quit)
+	app.lyricsw = NewLyricsWidget(app.PostFunc)
+	app.progressw = NewProgressWidget(app.PostFunc)
 	app.focused = app.lyricsw
 
 	return app
-}
-
-// Draw implements the root Widget.
-func (app *Application) Draw() {
-	app.progressw.Draw()
-	app.lyricsw.Draw()
 }
 
 // Update subwidgets after querying information from client.
@@ -73,21 +69,19 @@ func (app *Application) Update() {
 	app.progressw.Cancel()
 	app.lyricsw.Cancel()
 
-	var playing bool
-
 	switch app.status.State() {
 	case state.Play:
-		playing = true
+		app.playing = true
 	case state.Pause:
-		playing = false
+		app.playing = false
 	default:
 		// nothing to do
 		return
 	}
 
-	app.progressw.Update(playing, app.status)
+	app.progressw.Update(app.playing, app.status)
 	times, lines := app.Lyrics(app.song)
-	app.lyricsw.Update(playing, app.status, times, lines)
+	app.lyricsw.Update(app.playing, app.status, times, lines)
 }
 
 // Resize is run after a resize event.
@@ -118,21 +112,18 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 			}
 		}
 	case *tcell.EventResize:
-		app.Resize()
-		app.Update()
 		app.Screen.Fill(' ', tcell.StyleDefault)
 		app.Screen.Sync()
-		app.Draw()
-		app.Screen.Sync()
-		return true
-	case *events.PlayerEvent:
+		app.Resize()
 		app.Update()
-		app.Draw()
 		return true
-	case *events.PingEvent:
+	case *event.Player:
+		app.Update()
+		return true
+	case *event.Ping:
 		go app.client.Ping()
 		return true
-	case *events.FunctionEvent:
+	case *event.Function:
 		ev.Run()
 		return true
 	}
@@ -141,7 +132,7 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 
 // PostFunc runs function fn in the event loop.
 func (app *Application) PostFunc(fn func()) error {
-	ev := events.NewFunctionEvent(fn)
+	ev := event.NewFunctionEvent(fn)
 	return app.PostEvent(ev)
 }
 
@@ -212,14 +203,13 @@ func (app *Application) Run() error {
 	defer app.Screen.Fini()
 
 	app.PostFunc(app.Update)
-	app.PostFunc(app.Draw)
 
 	go app.Screen.ChannelEvents(app.events, app.quit)
 	go app.watcher.PostEvents(
 		app.PostEvent, app.quit)
-	go events.PostTickerEvents(
+	go event.PostTickerEvents(
 		app.PostEvent, 5*time.Second,
-		events.NewPingEvent, app.quit)
+		event.NewPingEvent, app.quit)
 
 	for {
 		app.Show()
