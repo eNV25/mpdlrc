@@ -1,13 +1,15 @@
 package events
 
-import "github.com/gdamore/tcell/v2"
+import (
+	"time"
+
+	"github.com/gdamore/tcell/v2"
+)
 
 type PingEvent struct {
-	*event
+	event
 }
 
 func NewPingEvent() tcell.Event {
-	ev := new(event)
-	ev.setTimeNow()
-	return &PingEvent{ev}
+	return &PingEvent{event{when: time.Now()}}
 }

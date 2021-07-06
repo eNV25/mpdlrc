@@ -52,7 +52,7 @@ func (w *ProgressWidget) Update(playing bool, status status.Status) {
 	w.duration = status.Duration() / time.Duration(w.totalX)
 	w.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * w.duration) >= w.elapsed }) - 1
 
-	if w.elapsedX >= (w.totalX - 1) {
+	if w.elapsedX >= w.totalX {
 		return
 	}
 

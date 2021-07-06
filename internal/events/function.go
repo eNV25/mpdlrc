@@ -1,14 +1,17 @@
 package events
 
-import "github.com/gdamore/tcell/v2"
+import (
+	"time"
+
+	"github.com/gdamore/tcell/v2"
+)
 
 type FunctionEvent struct {
-	*event
+	event
+
 	Run func()
 }
 
 func NewFunctionEvent(fn func()) tcell.Event {
-	ev := new(event)
-	ev.setTimeNow()
-	return &FunctionEvent{ev, fn}
+	return &FunctionEvent{event{when: time.Now()}, fn}
 }
