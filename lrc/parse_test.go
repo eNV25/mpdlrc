@@ -16,7 +16,7 @@ var testCases = []struct {
 [00:12.00]Line 1 lyrics
 [00:17.20]Line 2 lyrics
 [00:21.10]Line 3 lyrics
-		`,
+`,
 		[]time.Duration{
 			parseDuration("00m12.00s"),
 			parseDuration("00m17.20s"),
@@ -33,7 +33,7 @@ var testCases = []struct {
 [00:12.00][00:13.00][00:14.00]Line 1 lyrics
 [00:17.20]Line 2 lyrics
 [00:21.10][00:22.00]Line 3 lyrics
-		`,
+`,
 		[]time.Duration{
 			parseDuration("00m12.00s"),
 			parseDuration("00m13.00s"),

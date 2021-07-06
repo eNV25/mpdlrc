@@ -3,117 +3,65 @@ package lrc
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 	"time"
-	"unicode"
 )
 
+// NOTE: The parser simply ignores all unmatched lines and doen't return any parse errors.
+
+type Duration = time.Duration
+type Text = string
+
 // Parse parses a byte slice of LRC lyrics.
-func Parse(data []byte) ([]time.Duration, []string, error) {
+func Parse(data []byte) ([]Duration, []Text, error) {
 	return NewParser(bytes.NewReader(data)).Parse()
 }
 
 // ParseString parses a string of LRC lyrics.
-func ParseString(text string) ([]time.Duration, []string, error) {
+func ParseString(text string) ([]Duration, []Text, error) {
 	return NewParser(strings.NewReader(text)).Parse()
 }
 
 // Perser is a parser type.
 type Parser struct {
-	r *bufio.Reader
+	r io.Reader
 }
 
 // NewParser return a new parser from a reader.
 func NewParser(r io.Reader) *Parser {
-	return &Parser{r: bufio.NewReader(r)}
+	return &Parser{r}
 }
+
+// ll    -> [00:00.00]
+// index -> 0123456789
+
+func dToI(b byte) byte           { return b - '0' }
+func ddToD(b1, b2 byte) Duration { return Duration(10*dToI(b1) + dToI(b2)) }
+func isdd(b1, b2 byte) bool      { return '0' <= b1 && b1 <= '9' && '0' <= b2 && b2 <= '9' }
 
 // Parse parses the reader according to the LRC format.
 // https://en.wikipedia.org/wiki/LRC_(file_format)
-func (p *Parser) Parse() ([]time.Duration, []string, error) {
-	var i int
-	var tt, tmpt time.Duration
-	var ll, tmpl string
-	var err error
-	var ok bool
-
-	lines := make([]string, 0)
-	times := make([]time.Duration, 0)
-
-	// loop line by line until EOF
-	for {
-		var rep int
-
-		ll, err = p.r.ReadString('\n')
-
-		ll = strings.TrimRightFunc(ll, unicode.IsSpace)
-
-		// parse same line until no match
-		for {
-			tmpt, tmpl, ok = parseLine(ll)
-
-			if !ok {
-				break
-			}
-
-			ll = tmpl
-			tt = tmpt
-
-			i++
-			rep++
-			times = append(times, tt)
+func (p *Parser) Parse() ([]Duration, []Text, error) {
+	times := make([]Duration, 0)
+	lines := make([]Text, 0)
+	scnnr := bufio.NewScanner(p.r)
+	for scnnr.Scan() {
+		rp := 0
+		ll := scnnr.Text()
+		// [00:00.00][00:00.00]text -> [00:00.00]text -> text
+		for len(ll) >= 10 && ll[0] == '[' && isdd(ll[1], ll[2]) && ll[3] == ':' && isdd(ll[4], ll[5]) && ll[6] == '.' && isdd(ll[7], ll[8]) && ll[9] == ']' {
+			times = append(times, (ddToD(ll[1], ll[2])*time.Minute + ddToD(ll[4], ll[5])*time.Second + ddToD(ll[7], ll[8])*time.Second/100))
+			ll = ll[10:]
+			rp++
 		}
-
-		for x := 0; x < rep; x++ {
+		for i := 0; i < rp; i++ {
 			lines = append(lines, ll)
 		}
-
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, nil, err
-		}
 	}
-
+	if err := scnnr.Err(); err != nil {
+		return nil, nil, fmt.Errorf("LRC parse: %w", err)
+	}
 	return times, lines, nil
-}
-
-func isDigit(b byte) bool { return '0' <= b && b <= '9' }
-
-func parseLine(line string) (time.Duration, string, bool) {
-	// 0123456789
-	// [00:00.00]
-	// 00m00.00s
-
-	// len("[00:00.00]") => 10
-	// len("00m00.00s") => 9
-
-	if len(line) < 10 ||
-		line[0] != '[' ||
-		!isDigit(line[1]) || !isDigit(line[2]) ||
-		line[3] != ':' ||
-		!isDigit(line[4]) || !isDigit(line[5]) ||
-		line[6] != '.' ||
-		!isDigit(line[7]) || !isDigit(line[8]) ||
-		line[9] != ']' {
-
-		return 0, "", false
-	}
-
-	// [00:00.00] => 00m00.00s
-	var tmp strings.Builder
-	tmp.WriteString(line[1:3])
-	tmp.WriteString("m")
-	tmp.WriteString(line[4:9])
-	tmp.WriteString("s")
-
-	tt, err := time.ParseDuration(tmp.String())
-	if err != nil {
-		return 0, "", false
-	}
-
-	ll := line[10:]
-
-	return tt, ll, true
 }
