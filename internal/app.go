@@ -31,6 +31,9 @@ type Application struct {
 	watcher client.Watcher
 	song    song.Song
 	status  status.Status
+	times   []time.Duration
+	lines   []string
+	id      interface{}
 	playing bool
 
 	focused   widget.Widget
@@ -66,9 +69,6 @@ func (app *Application) Update() {
 	app.song = app.client.NowPlaying()
 	app.status = app.client.Status()
 
-	app.progressw.Cancel()
-	app.lyricsw.Cancel()
-
 	switch app.status.State() {
 	case state.Play:
 		app.playing = true
@@ -79,9 +79,16 @@ func (app *Application) Update() {
 		return
 	}
 
+	app.progressw.Cancel()
+	app.lyricsw.Cancel()
+
+	if id := app.song.ID(); id != app.id {
+		app.id = id
+		app.times, app.lines = app.Lyrics(app.song)
+	}
+
 	app.progressw.Update(app.playing, app.status)
-	times, lines := app.Lyrics(app.song)
-	app.lyricsw.Update(app.playing, app.status, times, lines)
+	app.lyricsw.Update(app.playing, app.status, app.times, app.lines)
 }
 
 // Resize is run after a resize event.
