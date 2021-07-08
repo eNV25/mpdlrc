@@ -47,16 +47,16 @@ func (p *Parser) Parse() ([]Duration, []Text, error) {
 	times := make([]Duration, 0)
 	lines := make([]Text, 0)
 	scnnr := bufio.NewScanner(p.r)
-	for scnnr.Scan() {
-		rp := 0
-		ll := scnnr.Text()
+	//scnnr.Split(bufio.ScanLines)
+	for rp := 0; scnnr.Scan(); {
+		ll := scnnr.Bytes()
 		// [00:00.00][00:00.00]text -> [00:00.00]text -> text
 		for len(ll) >= 10 && ll[0] == '[' && isdd(ll[1], ll[2]) && ll[3] == ':' && isdd(ll[4], ll[5]) && ll[6] == '.' && isdd(ll[7], ll[8]) && ll[9] == ']' {
 			times = append(times, (ddToD(ll[1], ll[2])*time.Minute + ddToD(ll[4], ll[5])*time.Second + ddToD(ll[7], ll[8])*time.Second/100))
 			ll = ll[10:]
 			rp++
 		}
-		for i := 0; i < rp; i++ {
+		for ll := string(ll); rp > 0; rp-- {
 			lines = append(lines, ll)
 		}
 	}
