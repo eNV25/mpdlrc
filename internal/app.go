@@ -128,7 +128,7 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 		app.Update()
 		return true
 	case *event.Ping:
-		go app.client.Ping()
+		app.client.Ping()
 		return true
 	case *event.Function:
 		ev.Run()
@@ -145,7 +145,7 @@ func (app *Application) PostFunc(fn func()) error {
 
 // SetView updates the views of subwidgets.
 func (app *Application) SetView(view views.View) {
-	if app.lyricsv == nil {
+	if app.lyricsv == nil || app.progressv == nil {
 		app.progressv = views.NewViewPort(view, 0, 0, 0, 0)
 		app.progressw.SetView(app.progressv)
 		app.lyricsv = views.NewViewPort(view, 0, 0, 0, 0)

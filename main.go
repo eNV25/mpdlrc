@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/pflag"
+
 	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/config"
-
-	"github.com/spf13/pflag"
 )
 
 var (

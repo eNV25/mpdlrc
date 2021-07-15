@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrAlreadyClosed = errors.New("already closed")
+	ErrAlreadyClosed = errors.New("MPDClient: already closed")
 )
 
 type MPDClient struct {
