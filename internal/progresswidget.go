@@ -89,6 +89,9 @@ func (w *ProgressWidget) Resize() {
 	w.totalX, _ = w.view.Size()
 }
 
-func (w *ProgressWidget) Size() (int, int) { return w.view.Size() }
+func (w *ProgressWidget) Size() (int, int) {
+	x, _ := w.view.Size()
+	return x, 1
+}
 
 func (*ProgressWidget) HandleEvent(tcell.Event) bool { return false }

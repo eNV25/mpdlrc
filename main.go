@@ -19,7 +19,11 @@ var (
 	cfg      = config.DefaultConfig()
 )
 
-func init() {
+func exit() { os.Exit(exitCode) }
+
+func main() {
+	defer exit()
+
 	log.SetFlags(0)
 	pflag.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override MusicDir`)
 	pflag.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override LyricsDir`)
@@ -28,19 +32,13 @@ func init() {
 	pflag.StringVar(&cfg.MPD.Password, `mpd-password`, cfg.MPD.Password, `override MPD.Password`)
 	pflag.BoolVar(&cfg.Debug, `debug`, cfg.Debug, `enable debug`)
 	pflag.BoolVarP(&usage, `help`, `h`, usage, `show this help message`)
-}
-
-func exit() { os.Exit(exitCode) }
-
-func main() {
-	defer exit()
 
 	for _, fpath := range config.ConfigFiles {
 		err := cfg.MergeTOMLFile(fpath)
 		if err != nil {
 			switch err.(type) {
 			case *os.PathError:
-				// no-op
+				// no-op //
 			default:
 				fmt.Fprintln(os.Stderr, err)
 			}
