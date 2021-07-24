@@ -166,15 +166,14 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 	}
 
 	{
-		spc := true
-		style := tcell.StyleDefault.Bold(true).Reverse(true)
-		for i, r := range m.maincs[mid] {
-			if spc && !isSpace(r) {
-				spc = false
-			}
-			if !spc {
-				m.styles[mid][i] = style
-			}
+		i := 0
+		for i < len(m.maincs[mid]) && isSpace(m.maincs[mid][i]) {
+			i++
+		}
+		style := tcell.StyleDefault.Attributes(tcell.AttrBold | tcell.AttrReverse)
+		for i < len(m.maincs[mid]) {
+			m.styles[mid][i] = style
+			i++
 		}
 	}
 
