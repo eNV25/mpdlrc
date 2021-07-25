@@ -13,18 +13,18 @@ import (
 	"github.com/env25/mpdlrc/internal/config"
 )
 
-var (
-	exitCode = 0
-	usage    = false
-	cfg      = config.DefaultConfig()
-)
+var exitCode = 0
 
 func exit() { os.Exit(exitCode) }
 
 func main() {
 	defer exit()
 
-	log.SetFlags(0)
+	var (
+		usage = false
+		cfg   = config.DefaultConfig()
+	)
+
 	pflag.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override MusicDir`)
 	pflag.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override LyricsDir`)
 	pflag.StringVar(&cfg.MPD.Connection, `mpd-connection`, cfg.MPD.Connection, `override MPD.Connection (possible "unix", "tcp")`)
@@ -51,6 +51,8 @@ func main() {
 		pflag.Usage()
 		return
 	}
+
+	log.SetFlags(0)
 
 	if cfg.Debug {
 		logBuilder := new(strings.Builder)
