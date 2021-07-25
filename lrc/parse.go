@@ -16,22 +16,12 @@ type Text = string
 
 // Parse parses a byte slice of LRC lyrics.
 func Parse(data []byte) ([]Duration, []Text, error) {
-	return NewParser(bytes.NewReader(data)).Parse()
+	return ParseReader(bytes.NewReader(data))
 }
 
 // ParseString parses a string of LRC lyrics.
 func ParseString(text string) ([]Duration, []Text, error) {
-	return NewParser(strings.NewReader(text)).Parse()
-}
-
-// Perser is a parser type.
-type Parser struct {
-	reader io.Reader
-}
-
-// NewParser return a new parser from a reader.
-func NewParser(r io.Reader) *Parser {
-	return &Parser{r}
+	return ParseReader(strings.NewReader(text))
 }
 
 // ll    -> [00:00.00]
@@ -43,10 +33,10 @@ func isdd(b1, b2 byte) bool      { return '0' <= b1 && b1 <= '9' && '0' <= b2 &&
 
 // Parse parses the reader according to the LRC format.
 // https://en.wikipedia.org/wiki/LRC_(file_format)
-func (p *Parser) Parse() ([]Duration, []Text, error) {
+func ParseReader(reader io.Reader) ([]Duration, []Text, error) {
 	times := make([]Duration, 0)
 	lines := make([]Text, 0)
-	scnnr := bufio.NewScanner(p.reader)
+	scnnr := bufio.NewScanner(reader)
 	//scnnr.Split(bufio.ScanLines)
 	for rp := 0; scnnr.Scan(); {
 		ll := scnnr.Bytes()

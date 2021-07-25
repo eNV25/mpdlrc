@@ -163,7 +163,7 @@ func (app *Application) Lyrics(song song.Song) ([]time.Duration, []string) {
 		// TODO: better error messages
 		return make([]time.Duration, 1), make([]string, 1) // blank screen
 	} else {
-		if times, lines, err := lrc.NewParser(r).Parse(); err != nil {
+		if times, lines, err := lrc.ParseReader(r); err != nil {
 			// TODO: better error messages
 			return make([]time.Duration, 1), make([]string, 1) // blank screen
 		} else {

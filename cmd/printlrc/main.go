@@ -24,7 +24,7 @@ func main() {
 		defer f.Close()
 	}
 
-	times, lines, err := lrc.NewParser(f).Parse()
+	times, lines, err := lrc.ParseReader(f)
 	if err != nil {
 		panic(err)
 	}
