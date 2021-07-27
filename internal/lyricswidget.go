@@ -124,7 +124,7 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 
 	for i := i1; i < i2 && i < len(lines); i++ {
 		n := textwidth.WidthString(lines[i])
-		off := (x-n)/2 + 1
+		off := (x - n) / 2
 		if off < 0 {
 			off = 0
 		}

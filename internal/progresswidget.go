@@ -62,7 +62,7 @@ func (w *ProgressWidget) Update(playing bool, status status.Status) {
 }
 
 func (w *ProgressWidget) update() {
-	if w.elapsedX >= (w.totalX - 1) {
+	if w.elapsedX >= w.totalX {
 		return
 	}
 
