@@ -23,12 +23,7 @@ type LyricsWidget struct {
 	view     views.View
 	cellView *views.CellView
 
-	toCall  *time.Timer
-	elapsed time.Duration
-	times   []time.Duration
-	lines   []string
-	total   int
-	index   int
+	toCall *time.Timer
 }
 
 // NewLyricsWidget allocates new LyricsWidget.
@@ -56,44 +51,42 @@ func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.D
 		lines[i] = norm.NFC.String(lines[i])
 	}
 
-	w.lines = lines
-	w.times = times
-	w.total = len(lines)
+	total := len(lines)
+	elapsed := status.Elapsed()
+	index := sort.Search(total, func(i int) bool { return times[i] >= elapsed })
 
-	w.elapsed = status.Elapsed()
-	w.index = sort.Search(w.total, func(i int) bool { return w.times[i] >= w.elapsed })
-
-	if w.index < 0 || w.index >= w.total {
-		w.index = 0
-		w.total = 1
-		w.lines = make([]string, 1)
+	if index < 0 || index >= total {
+		index = 0
+		total = 1
+		lines = make([]string, 1)
 	} else {
-		w.index -= 1
+		// select previous line
+		index -= 1
 	}
 
-	if w.index >= (w.total - 1) {
+	if index >= (total - 1) {
 		return
 	}
 
 	if playing {
-		w.update()
+		w.update(times, lines, elapsed, index, total)
 	} else {
-		w.updateModel(w.lines, w.index)
+		w.updateModel(lines, index)
 	}
 	w.postFunc(w.Draw)
 }
 
-func (w *LyricsWidget) update() {
-	w.updateModel(w.lines, w.index)
+func (w *LyricsWidget) update(times []time.Duration, lines []string, elapsed time.Duration, index int, total int) {
+	w.updateModel(lines, index)
 
-	if w.index >= (w.total - 1) {
+	if index >= (total - 1) {
 		return
 	}
 
-	w.toCall = time.AfterFunc((w.times[w.index+1] - w.elapsed), func() {
-		w.index += 1
-		w.elapsed = w.times[w.index]
-		w.update()
+	w.toCall = time.AfterFunc((times[index+1] - elapsed), func() {
+		index += 1
+		elapsed = times[index]
+		w.update(times, lines, elapsed, index, total)
 		w.postFunc(w.Draw)
 	})
 }

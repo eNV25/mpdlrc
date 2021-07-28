@@ -18,8 +18,6 @@ type ProgressWidget struct {
 	toCall *time.Timer
 	quit   chan struct{}
 
-	elapsed  time.Duration
-	duration time.Duration
 	elapsedX int
 	totalX   int
 	offsetY  int
@@ -47,28 +45,28 @@ func (w *ProgressWidget) Cancel() {
 }
 
 func (w *ProgressWidget) Update(playing bool, status status.Status) {
-	w.elapsed = status.Elapsed()
-	w.duration = status.Duration() / time.Duration(w.totalX)
-	w.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * w.duration) >= w.elapsed })
+	elapsed := status.Elapsed()
+	duration := status.Duration() / time.Duration(w.totalX)
+	w.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * duration) >= elapsed })
 
 	if w.elapsedX >= w.totalX {
 		return
 	}
 
 	if playing {
-		w.update()
+		w.update(duration)
 	}
 	w.postFunc(w.Draw)
 }
 
-func (w *ProgressWidget) update() {
+func (w *ProgressWidget) update(duration time.Duration) {
 	if w.elapsedX >= w.totalX {
 		return
 	}
 
-	w.toCall = time.AfterFunc(w.duration, func() {
+	w.toCall = time.AfterFunc(duration, func() {
 		w.elapsedX += 1
-		w.update()
+		w.update(duration)
 		w.postFunc(w.Draw)
 	})
 }
