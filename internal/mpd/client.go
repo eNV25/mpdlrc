@@ -18,7 +18,7 @@ type MPDClient struct {
 	client              *mpd.Client
 	net, addr, password string
 
-	closedptr uint32 // atomic
+	closedval uint32 // atomic
 }
 
 // NewMPDClient returns a pointer to an instance of MPDClient.
@@ -31,9 +31,9 @@ func NewMPDClient(net, addr, password string) *MPDClient {
 	}
 }
 
-func (c *MPDClient) closed() bool { return atomic.LoadUint32(&c.closedptr) != 0 }
+func (c *MPDClient) closed() bool { return atomic.LoadUint32(&c.closedval) != 0 }
 
-func (c *MPDClient) setClosed() bool { return atomic.CompareAndSwapUint32(&c.closedptr, 0, 1) }
+func (c *MPDClient) setClosed() bool { return atomic.CompareAndSwapUint32(&c.closedval, 0, 1) }
 
 func (c *MPDClient) Start() (err error) {
 	c.client, err = mpd.DialAuthenticated(c.net, c.addr, c.password)

@@ -1,27 +1,35 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
 	"github.com/env25/mpdlrc/lrc"
+	"github.com/spf13/pflag"
 )
 
-var fpath string
-
-func init() {
-	flag.StringVar(&fpath, "file", os.Args[1], "select file")
-}
-
 func main() {
-	flag.Parse()
+	var fpath string
 
-	f, err := os.Open(fpath)
-	if err != nil {
-		panic(err)
+	pflag.StringVar(&fpath, "file", "", "select file")
+
+	pflag.Parse()
+
+	var f *os.File
+
+	if fpath == "" && pflag.Arg(0) != "" {
+		fpath = pflag.Arg(0)
+	}
+
+	if err := (error)(nil); fpath == "" {
+		f = os.Stdin
 	} else {
-		defer f.Close()
+		f, err = os.Open(fpath)
+		if err != nil {
+			panic(err)
+		} else {
+			defer f.Close()
+		}
 	}
 
 	times, lines, err := lrc.ParseReader(f)
