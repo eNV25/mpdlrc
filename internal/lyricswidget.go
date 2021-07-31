@@ -109,6 +109,8 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 	i1 := index - mid
 	i2 := index + mid + 1
 
+	hlStyle := tcell.StyleDefault.Attributes(tcell.AttrBold | tcell.AttrReverse)
+
 	row := 0
 
 	for ; i1 < 0; i1++ {
@@ -116,17 +118,17 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 	}
 
 	for i := i1; i < i2 && i < len(lines); i++ {
-		n := textwidth.WidthString(lines[i])
-		off := (x - n) / 2
+		width := textwidth.WidthString(lines[i])
+		off := (x - width) / 2
 		if off < 0 {
 			off = 0
 		}
-		n += off
+		width += off
 
-		m.maincs[row] = make([]rune, n)
-		m.combcs[row] = make([][]rune, n)
-		m.widths[row] = make([]int, n)
-		m.styles[row] = make([]tcell.Style, n)
+		m.maincs[row] = make([]rune, width)
+		m.combcs[row] = make([][]rune, width)
+		m.widths[row] = make([]int, width)
+		m.styles[row] = make([]tcell.Style, width)
 
 		cell := 0
 
@@ -146,6 +148,10 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 			m.combcs[row][cell] = runes[1:]
 			m.widths[row][cell] = wd
 
+			if row == mid {
+				m.styles[row][cell] = hlStyle
+			}
+
 			cell += wd
 		}
 
@@ -158,41 +164,7 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 		row++
 	}
 
-	{
-		i := 0
-		for i < len(m.maincs[mid]) && isSpace(m.maincs[mid][i]) {
-			i++
-		}
-		style := tcell.StyleDefault.Attributes(tcell.AttrBold | tcell.AttrReverse)
-		for i < len(m.maincs[mid]) {
-			m.styles[mid][i] = style
-			i++
-		}
-	}
-
 	w.cellView.SetModel(m)
-}
-
-func isSpace(r rune) bool {
-	if r <= '\u00FF' {
-		// Obvious ASCII ones: \t through \r plus space. Plus two Latin-1 oddballs.
-		switch r {
-		case ' ', '\t', '\n', '\v', '\f', '\r':
-			return true
-		case '\u0085', '\u00A0':
-			return true
-		}
-		return false
-	}
-	// High-valued ones.
-	if '\u2000' <= r && r <= '\u200A' {
-		return true
-	}
-	switch r {
-	case '\u1680', '\u2028', '\u2029', '\u202F', '\u205F', '\u3000':
-		return true
-	}
-	return false
 }
 
 var _ views.CellModel = &lyricsModel{}
