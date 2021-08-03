@@ -96,18 +96,21 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 
 	x, y := w.view.Size()
 	mid := y / 2
+	midoff := 0
 
 	m.width = 0
 	m.height = y + 1
+
+	i1 := index - mid
+	i2 := index + mid + 1
+
+	hlStyle := tcell.StyleDefault.Attributes(tcell.AttrBold | tcell.AttrReverse)
 
 	m.maincs = make([][]rune, m.height)
 	m.combcs = make([][][]rune, m.height)
 	m.widths = make([][]int, m.height)
 	m.styles = make([][]tcell.Style, m.height)
 	m.cells = make([]int, m.height)
-
-	i1 := index - mid
-	i2 := index + mid + 1
 
 	row := 0
 
@@ -116,19 +119,23 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 	}
 
 	for i := i1; i < i2 && i < len(lines); i++ {
-		n := textwidth.WidthString(lines[i])
-		off := (x - n) / 2
+		width := textwidth.WidthString(lines[i])
+		off := (x - width) / 2
 		if off < 0 {
 			off = 0
 		}
-		n += off
+		width += off
 
-		m.maincs[row] = make([]rune, n)
-		m.combcs[row] = make([][]rune, n)
-		m.widths[row] = make([]int, n)
-		m.styles[row] = make([]tcell.Style, n)
+		m.maincs[row] = make([]rune, width)
+		m.combcs[row] = make([][]rune, width)
+		m.widths[row] = make([]int, width)
+		m.styles[row] = make([]tcell.Style, width)
 
 		cell := 0
+
+		if row == mid {
+			midoff = off
+		}
 
 		for ; off > 0; off-- {
 			m.maincs[row][cell] = ' '
@@ -158,41 +165,11 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 		row++
 	}
 
-	{
-		i := 0
-		for i < len(m.maincs[mid]) && isSpace(m.maincs[mid][i]) {
-			i++
-		}
-		style := tcell.StyleDefault.Attributes(tcell.AttrBold | tcell.AttrReverse)
-		for i < len(m.maincs[mid]) {
-			m.styles[mid][i] = style
-			i++
-		}
+	for cell := midoff; cell < len(m.maincs[mid]); cell++ {
+		m.styles[mid][cell] = hlStyle
 	}
 
 	w.cellView.SetModel(m)
-}
-
-func isSpace(r rune) bool {
-	if r <= '\u00FF' {
-		// Obvious ASCII ones: \t through \r plus space. Plus two Latin-1 oddballs.
-		switch r {
-		case ' ', '\t', '\n', '\v', '\f', '\r':
-			return true
-		case '\u0085', '\u00A0':
-			return true
-		}
-		return false
-	}
-	// High-valued ones.
-	if '\u2000' <= r && r <= '\u200A' {
-		return true
-	}
-	switch r {
-	case '\u1680', '\u2028', '\u2029', '\u202F', '\u205F', '\u3000':
-		return true
-	}
-	return false
 }
 
 var _ views.CellModel = &lyricsModel{}
@@ -209,7 +186,7 @@ type lyricsModel struct {
 
 func (m *lyricsModel) GetCell(x, y int) (rune, tcell.Style, []rune, int) {
 	if x < 0 || y < 0 || y >= m.height || x >= m.cells[y] {
-		return 0, tcell.StyleDefault, nil, 1
+		return ' ', tcell.StyleDefault, nil, 1
 	}
 	return m.maincs[y][x], m.styles[y][x], m.combcs[y][x], m.widths[y][x]
 }
