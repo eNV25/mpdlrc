@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/pflag"
 
 	"github.com/env25/mpdlrc/internal"
@@ -21,8 +22,9 @@ func main() {
 	defer exit()
 
 	var (
-		usage = false
-		cfg   = config.DefaultConfig()
+		usage   = false
+		dumpcfg = false
+		cfg     = config.DefaultConfig()
 	)
 
 	pflag.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override MusicDir`)
@@ -31,17 +33,22 @@ func main() {
 	pflag.StringVar(&cfg.MPD.Address, `mpd-address`, cfg.MPD.Address, `override MPD.Address (use unix socket path or "host:port")`)
 	pflag.StringVar(&cfg.MPD.Password, `mpd-password`, cfg.MPD.Password, `override MPD.Password`)
 	pflag.BoolVar(&cfg.Debug, `debug`, cfg.Debug, `enable debug`)
+	pflag.BoolVar(&dumpcfg, `dump-config`, dumpcfg, `dump config`)
 	pflag.BoolVarP(&usage, `help`, `h`, usage, `show this help message`)
 
 	for _, fpath := range config.ConfigFiles {
-		err := cfg.MergeTOMLFile(fpath)
+		f, err := os.Open(fpath)
 		if err != nil {
 			switch err.(type) {
 			case *os.PathError:
-				// no-op //
+				// don't do anything if file doesn't exist //
 			default:
-				fmt.Fprintln(os.Stderr, err)
+				fmt.Fprintln(os.Stderr, fmt.Errorf("open config file: %w", err))
 			}
+		}
+		err = toml.NewDecoder(f).Decode(cfg)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, fmt.Errorf("decode config file: %w", err))
 		}
 	}
 
@@ -52,12 +59,20 @@ func main() {
 		return
 	}
 
+	if dumpcfg {
+		cfg.Expand()
+		var b strings.Builder
+		toml.NewEncoder(&b).Encode(cfg)
+		fmt.Fprint(os.Stdout, b.String()[:b.Len()-1])
+		return
+	}
+
 	log.SetFlags(0)
 
 	if cfg.Debug {
-		logBuilder := new(strings.Builder)
-		log.SetOutput(logBuilder)
-		defer fmt.Fprint(os.Stderr, logBuilder)
+		var logBuilder strings.Builder
+		log.SetOutput(&logBuilder)
+		defer fmt.Fprint(os.Stderr, logBuilder.String())
 	} else {
 		log.SetOutput(io.Discard)
 	}

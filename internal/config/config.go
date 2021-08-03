@@ -2,12 +2,9 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path"
 	"strings"
-
-	"github.com/pelletier/go-toml/v2"
 )
 
 type Config struct {
@@ -31,22 +28,6 @@ func DefaultConfig() (cfg *Config) {
 	cfg.MPD.Password = ""
 	cfg.Debug = false
 	return cfg
-}
-
-// MergeTOMLFile merges TOML file with Config.
-func (cfg *Config) MergeTOMLFile(fpath string) (err error) {
-	var f *os.File
-
-	if f, err = os.Open(fpath); err != nil {
-		return fmt.Errorf("open config file: %w", err)
-	}
-	defer f.Close()
-
-	if err = toml.NewDecoder(f).Decode(cfg); err != nil {
-		return fmt.Errorf("decode config file: %w", err)
-	}
-
-	return nil
 }
 
 // Expand expands tilde ("~") and variables ("$VAR" or "${VAR}") in paths in Config.
