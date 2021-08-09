@@ -26,16 +26,15 @@ type ProgressWidget struct {
 }
 
 func NewProgressWidget(postFunc func(fn func()) error) *ProgressWidget {
-	w := &ProgressWidget{
+	return &ProgressWidget{
 		postFunc: postFunc,
-		runes:    [3]rune{'=', '>', ' '},
+		runes:    [3]rune{'=', '>', '-'},
 		styles: [3]tcell.Style{
-			tcell.StyleDefault.Bold(true),
-			tcell.StyleDefault.Bold(true),
-			tcell.StyleDefault,
+			tcell.StyleDefault.Attributes(tcell.AttrBold),
+			tcell.StyleDefault.Attributes(tcell.AttrBold),
+			tcell.StyleDefault.Attributes(tcell.AttrDim),
 		},
 	}
-	return w
 }
 
 func (w *ProgressWidget) Cancel() {
@@ -72,11 +71,14 @@ func (w *ProgressWidget) update(duration time.Duration) {
 }
 
 func (w *ProgressWidget) Draw() {
-	w.view.Fill(w.runes[2], w.styles[2])
+	w.view.Fill(' ', tcell.StyleDefault)
 	for x := 0; x < w.elapsedX; x++ {
 		w.view.SetContent(x, w.offsetY, w.runes[0], nil, w.styles[0])
 	}
 	w.view.SetContent(w.elapsedX, w.offsetY, w.runes[1], nil, w.styles[1])
+	for x := w.elapsedX + 1; x < w.totalX; x++ {
+		w.view.SetContent(x, w.offsetY, w.runes[2], nil, w.styles[2])
+	}
 }
 
 func (w *ProgressWidget) SetView(view views.View) {
