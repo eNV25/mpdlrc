@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strings"
@@ -50,6 +49,7 @@ func main() {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, fmt.Errorf("decode config file: %w", err))
 		}
+		f.Close()
 	}
 
 	pflag.Parse()
@@ -59,8 +59,9 @@ func main() {
 		return
 	}
 
+	cfg.Expand()
+
 	if dumpcfg {
-		cfg.Expand()
 		var b strings.Builder
 		toml.NewEncoder(&b).Encode(cfg)
 		fmt.Fprint(os.Stdout, b.String()[:b.Len()-1])
@@ -69,15 +70,13 @@ func main() {
 
 	log.SetFlags(0)
 
-	if cfg.Debug {
-		var logBuilder strings.Builder
-		log.SetOutput(&logBuilder)
-		defer fmt.Fprint(os.Stderr, logBuilder.String())
-	} else {
-		log.SetOutput(io.Discard)
-	}
-
-	cfg.Expand()
+	var logBuilder strings.Builder
+	log.SetOutput(&logBuilder)
+	defer func() {
+		if cfg.Debug {
+			fmt.Fprint(os.Stderr, logBuilder.String())
+		}
+	}()
 
 	if err := cfg.Assert(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
