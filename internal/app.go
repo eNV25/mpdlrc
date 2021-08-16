@@ -218,19 +218,14 @@ func (app *Application) Run() error {
 		app.PostEvent, 5*time.Second,
 		event.NewPingEvent, app.quit)
 
-	for {
+	for ev := range app.events {
+		app.HandleEvent(ev)
 		app.Show()
-
-		select {
-		case <-app.quit:
-			goto rtrn
-		case ev := <-app.events:
-			app.HandleEvent(ev)
-		}
 	}
+
+	return nil
 
 quit:
 	close(app.quit)
-rtrn:
 	return err
 }
