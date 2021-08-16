@@ -53,19 +53,45 @@ func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.D
 
 	total := len(lines)
 	elapsed := status.Elapsed()
+
+	// This is index is the first line after the one to be displayed.
 	index := sort.Search(total, func(i int) bool { return times[i] >= elapsed })
 
-	if index < 0 || index >= total {
+	if index < 0 || index > total {
+		// This path is chosen when index is out of bounds for whatever reason.
+		// Will display nothing. Will not start AfterFunc chain.
+
 		index = 0
 		total = 1
 		lines = make([]string, 1)
-	} else {
-		// select previous line
-		index -= 1
-	}
+		playing = false
+	} else if index == 0 || index == total {
+		// This path is chosen when:
+		//
+		//  - index == total (no match from sort.Search)
+		//    Will highlight last line by setting index to total-1,
+		//    because all needed lines have already been shown.
+		//
+		//  - index == 0 (first march from sort.Search)
+		//    Will highlight nothing by setting index to -1,
+		//    because no line needs to be displayed yet.
+		//
+		// Will not start AfterFunc chain.
 
-	if index >= (total - 1) {
-		return
+		// select previous line
+		index--
+		playing = false
+	} else {
+		// 0 < index < total
+		// This path is chosen normally.
+		// Will display previous line, which is the line to be shown.
+
+		if index >= (total - 1) {
+			return
+		}
+
+		// select previous line
+		index--
 	}
 
 	if playing {
@@ -78,6 +104,7 @@ func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.D
 
 func (w *LyricsWidget) update(times []time.Duration, lines []string, elapsed time.Duration, index int, total int) {
 	w.updateModel(lines, index)
+	w.postFunc(w.Draw)
 
 	if index >= (total - 1) {
 		return
@@ -87,7 +114,6 @@ func (w *LyricsWidget) update(times []time.Duration, lines []string, elapsed tim
 		index += 1
 		elapsed = times[index]
 		w.update(times, lines, elapsed, index, total)
-		w.postFunc(w.Draw)
 	})
 }
 
@@ -101,6 +127,7 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 	m.width = 0
 	m.height = y + 1
 
+	// nothing is highlighted when index is -1 like it should
 	i1 := index - mid
 	i2 := index + mid + 1
 
