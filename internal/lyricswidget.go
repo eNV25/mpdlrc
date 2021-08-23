@@ -86,10 +86,6 @@ func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.D
 		// This path is chosen normally.
 		// Will display previous line, which is the line to be shown.
 
-		if index >= (total - 1) {
-			return
-		}
-
 		// select previous line
 		index--
 	}
