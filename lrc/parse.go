@@ -3,7 +3,6 @@ package lrc
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -51,7 +50,7 @@ func ParseReader(reader io.Reader) ([]Duration, []Text, error) {
 		}
 	}
 	if err := scnnr.Err(); err != nil {
-		return nil, nil, fmt.Errorf("LRC parse: %w", err)
+		return nil, nil, err
 	}
 	return times, lines, nil
 }
