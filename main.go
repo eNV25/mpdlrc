@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -38,16 +39,14 @@ func main() {
 	for _, fpath := range config.ConfigFiles {
 		f, err := os.Open(fpath)
 		if err != nil {
-			switch err.(type) {
-			case *os.PathError:
-				// don't do anything if file doesn't exist //
-			default:
-				fmt.Fprintln(os.Stderr, fmt.Errorf("open config file: %w", err))
+			if !errors.Is(err, os.ErrNotExist) {
+				fmt.Fprintln(os.Stderr, "open config file:", err)
 			}
+			continue
 		}
 		err = toml.NewDecoder(f).Decode(cfg)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, fmt.Errorf("decode config file: %w", err))
+			fmt.Fprintln(os.Stderr, "decode config file:", err)
 		}
 		f.Close()
 	}
