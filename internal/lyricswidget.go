@@ -65,27 +65,7 @@ func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.D
 		total = 1
 		lines = make([]string, 1)
 		playing = false
-	} else if index == 0 || index == total {
-		// This path is chosen when:
-		//
-		//  - index == total (no match from sort.Search)
-		//    Will highlight last line by setting index to total-1,
-		//    because all needed lines have already been shown.
-		//
-		//  - index == 0 (first march from sort.Search)
-		//    Will highlight nothing by setting index to -1,
-		//    because no line needs to be displayed yet.
-		//
-		// Will not start AfterFunc chain.
-
-		// select previous line
-		index--
-		playing = false
 	} else {
-		// 0 < index < total
-		// This path is chosen normally.
-		// Will display previous line, which is the line to be shown.
-
 		// select previous line
 		index--
 	}
