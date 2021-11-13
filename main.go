@@ -2,11 +2,11 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"strings"
 
+	"github.com/neeharvi/out"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/pflag"
 
@@ -40,13 +40,13 @@ func main() {
 		f, err := os.Open(fpath)
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
-				fmt.Fprintln(os.Stderr, "open config file:", err)
+				out.Fprintln(os.Stderr, "open config file:", err)
 			}
 			continue
 		}
 		err = toml.NewDecoder(f).Decode(cfg)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "decode config file:", err)
+			out.Fprintln(os.Stderr, "decode config file:", err)
 		}
 		f.Close()
 	}
@@ -63,7 +63,7 @@ func main() {
 	if dumpcfg {
 		var b strings.Builder
 		toml.NewEncoder(&b).Encode(cfg)
-		fmt.Fprint(os.Stdout, b.String()[:b.Len()-1])
+		out.Fprint(os.Stdout, b.String()[:b.Len()-1])
 		return
 	}
 
@@ -73,18 +73,18 @@ func main() {
 	log.SetOutput(&logBuilder)
 	defer func() {
 		if cfg.Debug {
-			fmt.Fprint(os.Stderr, logBuilder.String())
+			out.Fprint(os.Stderr, logBuilder.String())
 		}
 	}()
 
 	if err := cfg.Assert(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		out.Fprintln(os.Stderr, err)
 		exitCode = 1
 		return
 	}
 
 	if err := internal.NewApplication(cfg).Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		out.Fprintln(os.Stderr, err)
 		exitCode = 1
 		return
 	}

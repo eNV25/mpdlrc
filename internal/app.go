@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"time"
@@ -183,25 +182,21 @@ func (app *Application) Run() error {
 
 	app.Screen, err = tcell.NewScreen()
 	if err != nil {
-		err = fmt.Errorf("new screen: %w", err)
 		goto quit
 	}
 
 	err = app.Screen.Init()
 	if err != nil {
-		err = fmt.Errorf("init screen: %w", err)
 		goto quit
 	}
 
 	err = app.client.Start()
 	if err != nil {
-		err = fmt.Errorf("starting client: %w", err)
 		goto quit
 	}
 
 	err = app.watcher.Start()
 	if err != nil {
-		err = fmt.Errorf("starting watcher: %w", err)
 		goto quit
 	}
 
