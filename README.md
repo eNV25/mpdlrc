@@ -1,5 +1,7 @@
 # mpdlrc
 
+https://github.com/eNV25/mpdlrc/
+
 ## Install
 
 Installation requires a [go](http://golang.org/) compiler and the `go` tool.
