@@ -29,8 +29,8 @@ func main() {
 
 	pflag.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override MusicDir`)
 	pflag.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override LyricsDir`)
-	pflag.StringVar(&cfg.MPD.Connection, `mpd-connection`, cfg.MPD.Connection, `override MPD.Connection (possible "unix", "tcp")`)
-	pflag.StringVar(&cfg.MPD.Address, `mpd-address`, cfg.MPD.Address, `override MPD.Address (use unix socket path or "host:port")`)
+	pflag.StringVar(&cfg.MPD.Connection, `mpd-connection`, cfg.MPD.Connection, `override MPD.Connection ("unix" or "tcp")`)
+	pflag.StringVar(&cfg.MPD.Address, `mpd-address`, cfg.MPD.Address, `override MPD.Address ("socket" or "host:port")`)
 	pflag.StringVar(&cfg.MPD.Password, `mpd-password`, cfg.MPD.Password, `override MPD.Password`)
 	pflag.BoolVar(&cfg.Debug, `debug`, cfg.Debug, `enable debug`)
 	pflag.BoolVar(&dumpcfg, `dump-config`, dumpcfg, `dump config`)

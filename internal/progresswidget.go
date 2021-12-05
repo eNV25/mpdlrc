@@ -11,7 +11,7 @@ import (
 )
 
 type ProgressWidget struct {
-	postFunc func(fn func()) error
+	postFunc func(fn func())
 
 	view views.View
 
@@ -25,7 +25,7 @@ type ProgressWidget struct {
 	styles   [3]tcell.Style
 }
 
-func NewProgressWidget(postFunc func(fn func()) error) *ProgressWidget {
+func NewProgressWidget(postFunc func(fn func())) *ProgressWidget {
 	return &ProgressWidget{
 		postFunc: postFunc,
 		runes:    [3]rune{'=', '>', '-'},
@@ -53,9 +53,12 @@ func (w *ProgressWidget) Update(playing bool, status status.Status) {
 	}
 
 	if playing {
-		w.update(duration)
+		go w.update(duration)
+	} else {
+		go func() {
+			w.postFunc(w.Draw)
+		}()
 	}
-	w.postFunc(w.Draw)
 }
 
 func (w *ProgressWidget) update(duration time.Duration) {

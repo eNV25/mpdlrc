@@ -18,7 +18,7 @@ var _ widget.Widget = &LyricsWidget{}
 
 // LyricsWidget is a Widget implementation.
 type LyricsWidget struct {
-	postFunc func(fn func()) error
+	postFunc func(fn func())
 
 	view     views.View
 	cellView *views.CellView
@@ -27,7 +27,7 @@ type LyricsWidget struct {
 }
 
 // NewLyricsWidget allocates new LyricsWidget.
-func NewLyricsWidget(postFunc func(fn func()) error) *LyricsWidget {
+func NewLyricsWidget(postFunc func(fn func())) *LyricsWidget {
 	w := &LyricsWidget{
 		postFunc: postFunc,
 		cellView: views.NewCellView(),
@@ -71,11 +71,13 @@ func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.D
 	}
 
 	if playing {
-		w.update(times, lines, elapsed, index, total)
+		go w.update(times, lines, elapsed, index, total)
 	} else {
-		w.updateModel(lines, index)
+		go func() {
+			w.updateModel(lines, index)
+			w.postFunc(w.Draw)
+		}()
 	}
-	w.postFunc(w.Draw)
 }
 
 func (w *LyricsWidget) update(times []time.Duration, lines []string, elapsed time.Duration, index int, total int) {

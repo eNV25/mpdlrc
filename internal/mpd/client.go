@@ -6,6 +6,7 @@ import (
 
 	"github.com/fhs/gompd/v2/mpd"
 
+	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/song"
 	"github.com/env25/mpdlrc/internal/status"
 )
@@ -20,6 +21,8 @@ type MPDClient struct {
 
 	closedval uint32 // atomic
 }
+
+var _ client.Client = &MPDClient{}
 
 // NewMPDClient returns a pointer to an instance of MPDClient.
 // A password of "" can be used if there is no password.

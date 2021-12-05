@@ -56,8 +56,8 @@ func NewApplication(cfg *config.Config) *Application {
 	app.client = mpd.NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 	app.watcher = mpd.NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 
-	app.lyricsw = NewLyricsWidget(app.PostFunc)
-	app.progressw = NewProgressWidget(app.PostFunc)
+	app.lyricsw = NewLyricsWidget(app.postFunc)
+	app.progressw = NewProgressWidget(app.postFunc)
 	app.focused = app.lyricsw
 
 	return app
@@ -83,7 +83,7 @@ func (app *Application) Update() {
 
 	if id := app.song.ID(); id != app.id {
 		app.id = id
-		app.times, app.lines = app.Lyrics(app.song)
+		app.times, app.lines = app.lyrics(app.song)
 	}
 
 	app.progressw.Update(app.playing, app.status)
@@ -118,6 +118,7 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 			}
 		}
 	case *tcell.EventResize:
+		// guaranteed to run at program start
 		app.Screen.Fill(' ', tcell.StyleDefault)
 		app.Screen.Sync()
 		app.Resize()
@@ -136,10 +137,9 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 	return app.focused.HandleEvent(ev)
 }
 
-// PostFunc runs function fn in the event loop.
-func (app *Application) PostFunc(fn func()) error {
-	ev := event.NewFunctionEvent(fn)
-	return app.PostEvent(ev)
+// postFunc runs function fn in the event loop. uses an unbuffered channel.
+func (app *Application) postFunc(fn func()) {
+	app.events <- event.NewFunctionEvent(fn)
 }
 
 // SetView updates the views of subwidgets.
@@ -154,16 +154,14 @@ func (app *Application) SetView(view views.View) {
 	app.lyricsv.Resize(0, 1, -1, -1)
 }
 
-// Lyrics fetches lyrics using information from song.
-func (app *Application) Lyrics(song song.Song) ([]time.Duration, []string) {
+// lyrics fetches lyrics using information from song.
+func (app *Application) lyrics(song song.Song) ([]time.Duration, []string) {
 	if r, err := os.Open(
 		path.Join(app.cfg.LyricsDir, app.song.LRCFile()),
 	); err != nil {
-		// TODO: better error messages
 		return make([]time.Duration, 1), make([]string, 1) // blank screen
 	} else {
 		if times, lines, err := lrc.ParseReader(r); err != nil {
-			// TODO: better error messages
 			return make([]time.Duration, 1), make([]string, 1) // blank screen
 		} else {
 			return times, lines
@@ -177,8 +175,7 @@ func (app *Application) Quit() {
 }
 
 // Run the application.
-func (app *Application) Run() error {
-	var err error
+func (app *Application) Run() (err error) {
 
 	app.Screen, err = tcell.NewScreen()
 	if err != nil {
@@ -189,38 +186,30 @@ func (app *Application) Run() error {
 	if err != nil {
 		goto quit
 	}
+	defer app.Screen.Fini()
 
 	err = app.client.Start()
 	if err != nil {
 		goto quit
 	}
+	defer app.client.Stop()
 
 	err = app.watcher.Start()
 	if err != nil {
 		goto quit
 	}
-
 	defer app.watcher.Stop()
-	defer app.client.Stop()
-	defer app.Screen.Fini()
-
-	app.PostFunc(app.Update)
 
 	go app.Screen.ChannelEvents(app.events, app.quit)
-	go app.watcher.PostEvents(
-		app.PostEvent, app.quit)
-	go event.PostTickerEvents(
-		app.PostEvent, 5*time.Second,
-		event.NewPingEvent, app.quit)
+	go app.watcher.PostEvents(app.events, app.quit)
+	go event.PostTickerEvents(app.events, 5*time.Second, event.NewPingEvent, app.quit)
 
 	for ev := range app.events {
 		app.HandleEvent(ev)
 		app.Show()
 	}
 
-	return nil
-
 quit:
 	close(app.quit)
-	return err
+	return
 }
