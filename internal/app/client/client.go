@@ -1,8 +1,8 @@
 package client
 
 import (
-	"github.com/env25/mpdlrc/internal/song"
-	"github.com/env25/mpdlrc/internal/status"
+	"github.com/env25/mpdlrc/internal/app/song"
+	"github.com/env25/mpdlrc/internal/app/status"
 )
 
 type Client interface {

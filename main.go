@@ -2,90 +2,117 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/neeharvi/out"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/pflag"
 
 	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/config"
+	"github.com/env25/mpdlrc/internal/config/buildtag"
 )
 
-var exitCode = 0
-
-func exit() { os.Exit(exitCode) }
+const PROGNAME = "mpdlrc"
 
 func main() {
-	defer exit()
+	exitCode := 0
+
+	defer func() {
+		os.Exit(exitCode)
+	}()
 
 	var (
-		usage   = false
-		dumpcfg = false
-		cfg     = config.DefaultConfig()
+		flag_dumpcfg = false
+		flag_usage   = false
+		cfg          = config.DefaultConfig()
 	)
 
-	pflag.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override MusicDir`)
-	pflag.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override LyricsDir`)
-	pflag.StringVar(&cfg.MPD.Connection, `mpd-connection`, cfg.MPD.Connection, `override MPD.Connection ("unix" or "tcp")`)
-	pflag.StringVar(&cfg.MPD.Address, `mpd-address`, cfg.MPD.Address, `override MPD.Address ("socket" or "host:port")`)
-	pflag.StringVar(&cfg.MPD.Password, `mpd-password`, cfg.MPD.Password, `override MPD.Password`)
-	pflag.BoolVar(&cfg.Debug, `debug`, cfg.Debug, `enable debug`)
-	pflag.BoolVar(&dumpcfg, `dump-config`, dumpcfg, `dump config`)
-	pflag.BoolVarP(&usage, `help`, `h`, usage, `show this help message`)
+	flags_cfg := pflag.NewFlagSet(PROGNAME, pflag.ContinueOnError)
+	flags_cfg.SortFlags = false
+	flags_cfg.ParseErrorsWhitelist = pflag.ParseErrorsWhitelist{UnknownFlags: true}
+
+	flags_cfg.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override cfg.MusicDir`)
+	flags_cfg.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override cfg.LyricsDir`)
+	flags_cfg.StringVar(&cfg.MPD.Connection, `mpd-connection`, cfg.MPD.Connection, `override cfg.MPD.Connection ("unix" or "tcp")`)
+	flags_cfg.StringVar(&cfg.MPD.Address, `mpd-address`, cfg.MPD.Address, `override cfg.MPD.Address ("socket" or "host:port")`)
+	flags_cfg.StringVar(&cfg.MPD.Password, `mpd-password`, cfg.MPD.Password, `override cfg.MPD.Password`)
+
+	flags := pflag.NewFlagSet(PROGNAME, pflag.ContinueOnError)
+	flags.SortFlags = false
+
+	flags.BoolVar(&flag_dumpcfg, `dump-config`, false, `dump final config`)
+	flags.BoolVarP(&flag_usage, `help`, `h`, false, `display this help and exit`)
+	flags.StringArrayVar(&config.ConfigFiles, `config`, config.ConfigFiles, `use config file`)
+
+	flags_cfg.VisitAll(func(f *pflag.Flag) {
+		flags.Var((*fakeStringValue)(&f.DefValue), f.Name, f.Usage)
+	})
+
+	if err := flags.Parse(os.Args); err != nil {
+		fmt.Println(err)
+		exitCode = 2
+		return
+	}
+
+	if flag_usage {
+		fmt.Println("Usage of " + PROGNAME + ":")
+		fmt.Print(flags.FlagUsages())
+		exitCode = 0
+		return
+	}
 
 	for _, fpath := range config.ConfigFiles {
 		f, err := os.Open(fpath)
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
-				out.Fprintln(os.Stderr, "open config file:", err)
+				fmt.Fprintln(os.Stderr, "open config file:", err)
 			}
 			continue
 		}
 		err = toml.NewDecoder(f).Decode(cfg)
 		if err != nil {
-			out.Fprintln(os.Stderr, "decode config file:", err)
+			fmt.Fprintln(os.Stderr, "decode config file:", err)
 		}
 		f.Close()
 	}
 
-	pflag.Parse()
-
-	if usage {
-		pflag.Usage()
-		return
-	}
+	_ = flags_cfg.Parse(os.Args)
 
 	cfg.Expand()
 
-	if dumpcfg {
+	if flag_dumpcfg {
 		var b strings.Builder
 		toml.NewEncoder(&b).Encode(cfg)
-		out.Fprint(os.Stdout, b.String()[:b.Len()-1])
+		fmt.Fprint(os.Stdout, b.String())
+		exitCode = 0
 		return
 	}
 
 	log.SetFlags(0)
 
-	var logBuilder strings.Builder
-	log.SetOutput(&logBuilder)
-	defer func() {
-		if cfg.Debug {
-			out.Fprint(os.Stderr, logBuilder.String())
-		}
-	}()
-
-	if err := cfg.Assert(); err != nil {
-		out.Fprintln(os.Stderr, err)
-		exitCode = 1
-		return
+	if buildtag.Debug {
+		var logBuilder strings.Builder
+		log.SetOutput(&logBuilder)
+		defer func() {
+			fmt.Fprint(os.Stderr, logBuilder.String())
+		}()
+	} else {
+		log.SetOutput(io.Discard)
 	}
 
 	if err := internal.NewApplication(cfg).Run(); err != nil {
-		out.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, err)
 		exitCode = 1
 		return
 	}
 }
+
+type fakeStringValue string
+
+func (*fakeStringValue) Set(string) error { return nil }
+func (*fakeStringValue) Type() string     { return "string" }
+func (v *fakeStringValue) String() string { return string(*v) }

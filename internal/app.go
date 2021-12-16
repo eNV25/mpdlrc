@@ -1,21 +1,25 @@
 package internal
 
 import (
+	"log"
 	"os"
 	"path"
+	"reflect"
+	"runtime"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
 
-	"github.com/env25/mpdlrc/internal/client"
+	"github.com/env25/mpdlrc/internal/app/client"
+	"github.com/env25/mpdlrc/internal/app/event"
+	"github.com/env25/mpdlrc/internal/app/mpd"
+	"github.com/env25/mpdlrc/internal/app/song"
+	"github.com/env25/mpdlrc/internal/app/state"
+	"github.com/env25/mpdlrc/internal/app/status"
+	"github.com/env25/mpdlrc/internal/app/widget"
 	"github.com/env25/mpdlrc/internal/config"
-	"github.com/env25/mpdlrc/internal/event"
-	"github.com/env25/mpdlrc/internal/mpd"
-	"github.com/env25/mpdlrc/internal/song"
-	"github.com/env25/mpdlrc/internal/state"
-	"github.com/env25/mpdlrc/internal/status"
-	"github.com/env25/mpdlrc/internal/widget"
+	"github.com/env25/mpdlrc/internal/config/buildtag"
 	"github.com/env25/mpdlrc/lrc"
 )
 
@@ -99,6 +103,10 @@ func (app *Application) Resize() {
 
 // HandleEvent handles dem events.
 func (app *Application) HandleEvent(ev tcell.Event) bool {
+	if buildtag.Debug {
+		type dummy struct{}
+		log.Printf(reflect.TypeOf(dummy{}).PkgPath()+".Application.HandleEvent: case %T\n", ev)
+	}
 	switch ev := ev.(type) {
 	case *tcell.EventKey:
 		switch ev.Key() {
@@ -131,7 +139,15 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 		app.client.Ping()
 		return true
 	case *event.Function:
-		ev.Run()
+		if buildtag.Debug {
+			type dummy struct{}
+			log.Println(
+				reflect.TypeOf(dummy{}).PkgPath()+".Application.HandleEvent:",
+				"case *event.Function: ev.Func:",
+				runtime.FuncForPC(reflect.ValueOf(ev.Func).Pointer()).Name(),
+			)
+		}
+		ev.Func()
 		return true
 	}
 	return app.focused.HandleEvent(ev)

@@ -10,7 +10,6 @@ import (
 type Config struct {
 	MusicDir  string
 	LyricsDir string
-	Debug     bool
 
 	MPD struct {
 		Connection string
@@ -20,13 +19,12 @@ type Config struct {
 }
 
 func DefaultConfig() (cfg *Config) {
-	cfg = new(Config)
+	cfg = &Config{}
 	cfg.MusicDir = "~/Music"
 	cfg.LyricsDir = ""
 	cfg.MPD.Connection = "tcp"
 	cfg.MPD.Address = "localhost:6600"
 	cfg.MPD.Password = ""
-	cfg.Debug = false
 	return cfg
 }
 

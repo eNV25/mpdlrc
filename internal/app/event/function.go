@@ -9,7 +9,7 @@ import (
 type Function struct {
 	event
 
-	Run func()
+	Func func()
 }
 
 func NewFunctionEvent(fn func()) tcell.Event {

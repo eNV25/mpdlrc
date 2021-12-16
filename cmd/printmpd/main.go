@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/env25/mpdlrc/internal/client"
-	"github.com/env25/mpdlrc/internal/mpd"
+	"github.com/env25/mpdlrc/internal/app/client"
+	"github.com/env25/mpdlrc/internal/app/mpd"
+	"github.com/spf13/pflag"
 )
 
 func main() {
+	pflag.Parse()
 	var c client.Client = mpd.NewMPDClient("unix", "/run/user/1000/mpd/socket", "")
 	defer c.Stop()
 	c.Start()

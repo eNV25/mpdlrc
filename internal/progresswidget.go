@@ -7,7 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
 
-	"github.com/env25/mpdlrc/internal/status"
+	"github.com/env25/mpdlrc/internal/app/status"
 )
 
 type ProgressWidget struct {

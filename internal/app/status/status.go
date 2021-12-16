@@ -3,7 +3,7 @@ package status
 import (
 	"time"
 
-	"github.com/env25/mpdlrc/internal/state"
+	"github.com/env25/mpdlrc/internal/app/state"
 )
 
 type Status interface {

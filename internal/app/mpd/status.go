@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/env25/mpdlrc/internal/state"
+	"github.com/env25/mpdlrc/internal/app/state"
 )
 
 type Status map[string]string

@@ -10,8 +10,8 @@ import (
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/env25/mpdlrc/internal/status"
-	"github.com/env25/mpdlrc/internal/widget"
+	"github.com/env25/mpdlrc/internal/app/status"
+	"github.com/env25/mpdlrc/internal/app/widget"
 )
 
 var _ widget.Widget = &LyricsWidget{}
