@@ -97,9 +97,7 @@ func main() {
 	if buildtag.Debug {
 		var logBuilder strings.Builder
 		log.SetOutput(&logBuilder)
-		defer func() {
-			fmt.Fprint(os.Stderr, logBuilder.String())
-		}()
+		defer fmt.Fprint(os.Stderr, &logBuilder)
 	} else {
 		log.SetOutput(io.Discard)
 	}
