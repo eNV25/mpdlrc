@@ -25,11 +25,8 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
-	var (
-		flag_dumpcfg = false
-		flag_usage   = false
-		cfg          = config.DefaultConfig()
-	)
+	args := os.Args[1:]
+	cfg := config.DefaultConfig()
 
 	flags_cfg := pflag.NewFlagSet(PROGNAME, pflag.ContinueOnError)
 	flags_cfg.SortFlags = false
@@ -40,6 +37,11 @@ func main() {
 	flags_cfg.StringVar(&cfg.MPD.Connection, `mpd-connection`, cfg.MPD.Connection, `override cfg.MPD.Connection ("unix" or "tcp")`)
 	flags_cfg.StringVar(&cfg.MPD.Address, `mpd-address`, cfg.MPD.Address, `override cfg.MPD.Address ("socket" or "host:port")`)
 	flags_cfg.StringVar(&cfg.MPD.Password, `mpd-password`, cfg.MPD.Password, `override cfg.MPD.Password`)
+
+	var (
+		flag_dumpcfg = false
+		flag_usage   = false
+	)
 
 	flags := pflag.NewFlagSet(PROGNAME, pflag.ContinueOnError)
 	flags.SortFlags = false
@@ -52,9 +54,9 @@ func main() {
 		flags.Var((*fakeStringValue)(&f.DefValue), f.Name, f.Usage)
 	})
 
-	if err := flags.Parse(os.Args); err != nil {
+	if err := flags.Parse(args); err != nil {
 		fmt.Println(err)
-		exitCode = 2
+		exitCode = 1
 		return
 	}
 
@@ -80,7 +82,7 @@ func main() {
 		f.Close()
 	}
 
-	_ = flags_cfg.Parse(os.Args)
+	flags_cfg.Parse(args)
 
 	cfg.Expand()
 
