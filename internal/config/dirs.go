@@ -6,6 +6,14 @@ import (
 	"path"
 )
 
+func ConfigDir() string {
+	if c, ok := os.LookupEnv("XDG_CONFIG_HOME"); !ok {
+		return path.Join(HomeDir(), ".config")
+	} else {
+		return c
+	}
+}
+
 func HomeDir() string {
 	if h, err := os.UserHomeDir(); err != nil {
 		if u, e := user.Current(); e != nil {

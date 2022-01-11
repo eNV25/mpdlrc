@@ -19,7 +19,6 @@ import (
 	"github.com/env25/mpdlrc/internal/app/status"
 	"github.com/env25/mpdlrc/internal/app/widget"
 	"github.com/env25/mpdlrc/internal/config"
-	"github.com/env25/mpdlrc/internal/config/buildtag"
 	"github.com/env25/mpdlrc/lrc"
 )
 
@@ -36,7 +35,7 @@ type Application struct {
 	status  status.Status
 	times   []time.Duration
 	lines   []string
-	id      interface{}
+	id      string
 	playing bool
 
 	focused   widget.Widget
@@ -60,8 +59,8 @@ func NewApplication(cfg *config.Config) *Application {
 	app.client = mpd.NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 	app.watcher = mpd.NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 
-	app.lyricsw = NewLyricsWidget(app.postFunc)
-	app.progressw = NewProgressWidget(app.postFunc)
+	app.lyricsw = NewLyricsWidget(app.postFunc, app.quit)
+	app.progressw = NewProgressWidget(app.postFunc, app.quit)
 	app.focused = app.lyricsw
 
 	return app
@@ -69,8 +68,12 @@ func NewApplication(cfg *config.Config) *Application {
 
 // Update subwidgets after querying information from client.
 func (app *Application) Update() {
-	app.song = app.client.NowPlaying()
-	app.status = app.client.Status()
+	song, status := app.client.NowPlaying(), app.client.Status()
+	if song != nil && status != nil {
+		app.song, app.status = song, status
+	} else {
+		return
+	}
 
 	switch app.status.State() {
 	case state.Play:
@@ -90,8 +93,8 @@ func (app *Application) Update() {
 		app.times, app.lines = app.lyrics(app.song)
 	}
 
-	app.progressw.Update(app.playing, app.status)
-	app.lyricsw.Update(app.playing, app.status, app.times, app.lines)
+	app.progressw.Update(app.playing, app.id, app.status.Elapsed(), app.status.Duration())
+	app.lyricsw.Update(app.playing, app.id, app.status.Elapsed(), app.times, app.lines)
 }
 
 // Resize is run after a resize event.
@@ -103,9 +106,8 @@ func (app *Application) Resize() {
 
 // HandleEvent handles dem events.
 func (app *Application) HandleEvent(ev tcell.Event) bool {
-	if buildtag.Debug {
-		type dummy struct{}
-		log.Printf(reflect.TypeOf(dummy{}).PkgPath()+".Application.HandleEvent: case %T\n", ev)
+	if config.Debug {
+		log.Printf("event: %T", ev)
 	}
 	switch ev := ev.(type) {
 	case *tcell.EventKey:
@@ -139,11 +141,9 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 		app.client.Ping()
 		return true
 	case *event.Function:
-		if buildtag.Debug {
-			type dummy struct{}
+		if config.Debug {
 			log.Println(
-				reflect.TypeOf(dummy{}).PkgPath()+".Application.HandleEvent:",
-				"case *event.Function: ev.Func:",
+				"event: *event.Function: ev.Func:",
 				runtime.FuncForPC(reflect.ValueOf(ev.Func).Pointer()).Name(),
 			)
 		}
@@ -161,6 +161,7 @@ func (app *Application) postFunc(fn func()) {
 // SetView updates the views of subwidgets.
 func (app *Application) SetView(view views.View) {
 	if app.lyricsv == nil || app.progressv == nil {
+		// init
 		app.progressv = views.NewViewPort(view, 0, 0, 0, 0)
 		app.progressw.SetView(app.progressv)
 		app.lyricsv = views.NewViewPort(view, 0, 0, 0, 0)
@@ -224,8 +225,9 @@ func (app *Application) Run() (err error) {
 		app.HandleEvent(ev)
 		app.Show()
 	}
+	return
 
 quit:
-	close(app.quit)
+	app.Quit()
 	return
 }

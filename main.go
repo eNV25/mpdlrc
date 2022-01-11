@@ -13,7 +13,6 @@ import (
 
 	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/config"
-	"github.com/env25/mpdlrc/internal/config/buildtag"
 )
 
 const PROGNAME = "mpdlrc"
@@ -96,7 +95,7 @@ func main() {
 
 	log.SetFlags(0)
 
-	if buildtag.Debug {
+	if config.Debug {
 		var logBuilder strings.Builder
 		log.SetOutput(&logBuilder)
 		defer fmt.Fprint(os.Stderr, &logBuilder)

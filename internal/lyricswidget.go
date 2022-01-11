@@ -2,6 +2,7 @@ package internal
 
 import (
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -10,7 +11,6 @@ import (
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/env25/mpdlrc/internal/app/status"
 	"github.com/env25/mpdlrc/internal/app/widget"
 )
 
@@ -18,41 +18,58 @@ var _ widget.Widget = &LyricsWidget{}
 
 // LyricsWidget is a Widget implementation.
 type LyricsWidget struct {
+	sync.RWMutex
 	postFunc func(fn func())
 
 	view     views.View
 	cellView *views.CellView
 
-	toCall *time.Timer
+	toCall struct {
+		sync.Mutex
+		*time.Timer
+	}
+	id   string
+	quit chan struct{}
 }
 
 // NewLyricsWidget allocates new LyricsWidget.
-func NewLyricsWidget(postFunc func(fn func())) *LyricsWidget {
+func NewLyricsWidget(postFunc func(fn func()), quit chan struct{}) *LyricsWidget {
 	w := &LyricsWidget{
 		postFunc: postFunc,
-		cellView: views.NewCellView(),
+		quit:     quit,
 	}
+	w.cellView = views.NewCellView()
 	w.cellView.Init()
 	return w
 }
 
 func (w *LyricsWidget) Cancel() {
-	if w.toCall != nil {
+	w.toCall.Lock()
+	defer w.toCall.Unlock()
+	if w.toCall.Timer != nil {
 		w.toCall.Stop()
 	}
 }
 
-func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.Duration, lines []string) {
-	if status == nil || times == nil || lines == nil {
-		return
-	}
+func (w *LyricsWidget) Update(
+	playing bool,
+	id string,
+	elapsed time.Duration,
+	times []time.Duration,
+	lines []string,
+) {
+	w.Lock()
+	w.id = id
+	w.Unlock()
+
+	w.RLock()
+	defer w.RUnlock()
 
 	for i := range lines {
 		lines[i] = norm.NFC.String(lines[i])
 	}
 
 	total := len(lines)
-	elapsed := status.Elapsed()
 
 	// This is index is the first line after the one to be displayed.
 	index := sort.Search(total, func(i int) bool { return times[i] >= elapsed })
@@ -70,8 +87,19 @@ func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.D
 		index--
 	}
 
+	select {
+	case _, ok := <-w.quit:
+		if !ok {
+			return
+		}
+	default:
+		if w.id != id {
+			return
+		}
+	}
+
 	if playing {
-		go w.update(times, lines, elapsed, index, total)
+		go w.update(id, times, lines, elapsed, index, total)
 	} else {
 		go func() {
 			w.updateModel(lines, index)
@@ -80,18 +108,37 @@ func (w *LyricsWidget) Update(playing bool, status status.Status, times []time.D
 	}
 }
 
-func (w *LyricsWidget) update(times []time.Duration, lines []string, elapsed time.Duration, index int, total int) {
+func (w *LyricsWidget) update(
+	id string,
+	times []time.Duration,
+	lines []string,
+	elapsed time.Duration,
+	index int,
+	total int,
+) {
+	w.RLock()
+	defer w.RUnlock()
+
+	select {
+	case _, ok := <-w.quit:
+		if !ok {
+			return
+		}
+	default:
+		if w.id != id || index >= (total-1) {
+			return
+		}
+	}
+
 	w.updateModel(lines, index)
 	w.postFunc(w.Draw)
 
-	if index >= (total - 1) {
-		return
-	}
-
-	w.toCall = time.AfterFunc((times[index+1] - elapsed), func() {
+	w.toCall.Lock()
+	defer w.toCall.Unlock()
+	w.toCall.Timer = time.AfterFunc((times[index+1] - elapsed), func() {
 		index += 1
 		elapsed = times[index]
-		w.update(times, lines, elapsed, index, total)
+		w.update(id, times, lines, elapsed, index, total)
 	})
 }
 
@@ -174,7 +221,9 @@ func (w *LyricsWidget) updateModel(lines []string, index int) {
 		m.styles[mid][cell] = hlStyle
 	}
 
+	w.Lock()
 	w.cellView.SetModel(m)
+	w.Unlock()
 }
 
 var _ views.CellModel = &lyricsModel{}
@@ -201,16 +250,22 @@ func (m *lyricsModel) MoveCursor(int, int)               { return }
 func (m *lyricsModel) SetCursor(int, int)                { return }
 
 func (w *LyricsWidget) SetView(view views.View) {
+	w.Lock()
 	w.view = view
 	w.cellView.SetView(view)
+	w.Unlock()
 }
 
 func (w *LyricsWidget) Draw() {
+	w.RLock()
+	defer w.RUnlock()
 	w.cellView.Draw()
 }
 
 func (w *LyricsWidget) Resize() {
+	w.Lock()
 	w.cellView.Resize()
+	w.Unlock()
 }
 
 func (w *LyricsWidget) HandleEvent(ev tcell.Event) bool {
@@ -218,5 +273,7 @@ func (w *LyricsWidget) HandleEvent(ev tcell.Event) bool {
 }
 
 func (w *LyricsWidget) Size() (int, int) {
+	w.RLock()
+	defer w.RUnlock()
 	return w.cellView.Size()
 }

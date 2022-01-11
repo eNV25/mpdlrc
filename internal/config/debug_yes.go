@@ -1,6 +1,6 @@
 //go:build debug
 // +build debug
 
-package buildtag
+package config
 
 const Debug = true
