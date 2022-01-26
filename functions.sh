@@ -1,0 +1,1 @@
+echorun () { echo "$@"; exec "$@"; }

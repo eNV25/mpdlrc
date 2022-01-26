@@ -11,13 +11,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
 
-	"github.com/env25/mpdlrc/internal/app/client"
-	"github.com/env25/mpdlrc/internal/app/event"
-	"github.com/env25/mpdlrc/internal/app/mpd"
-	"github.com/env25/mpdlrc/internal/app/song"
-	"github.com/env25/mpdlrc/internal/app/state"
-	"github.com/env25/mpdlrc/internal/app/status"
-	"github.com/env25/mpdlrc/internal/app/widget"
 	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/lrc"
 )
@@ -29,23 +22,23 @@ type Application struct {
 
 	cfg *config.Config
 
-	client  client.Client
-	watcher client.Watcher
-	song    song.Song
-	status  status.Status
+	client  Client
+	watcher Watcher
+	song    Song
+	status  Status
 	times   []time.Duration
 	lines   []string
 	id      string
 	playing bool
 
-	focused   widget.Widget
+	focused   Widget
 	lyricsv   *views.ViewPort
-	lyricsw   *LyricsWidget
+	lyricsw   *WidgetLyrics
 	progressv *views.ViewPort
-	progressw *ProgressWidget
+	progressw *WidgetProgress
 
-	quit   chan struct{}
 	events chan tcell.Event
+	quit   chan struct{}
 }
 
 // NewApplication allocates new Application from cfg.
@@ -56,8 +49,8 @@ func NewApplication(cfg *config.Config) *Application {
 		events: make(chan tcell.Event),
 	}
 
-	app.client = mpd.NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
-	app.watcher = mpd.NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
+	app.client = NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
+	app.watcher = NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 
 	app.lyricsw = NewLyricsWidget(app.postFunc, app.quit)
 	app.progressw = NewProgressWidget(app.postFunc, app.quit)
@@ -75,18 +68,18 @@ func (app *Application) Update() {
 		return
 	}
 
+	app.progressw.Cancel()
+	app.lyricsw.Cancel()
+
 	switch app.status.State() {
-	case state.Play:
+	case StatePlay:
 		app.playing = true
-	case state.Pause:
+	case StatePause:
 		app.playing = false
 	default:
 		// nothing to do
 		return
 	}
-
-	app.progressw.Cancel()
-	app.lyricsw.Cancel()
 
 	if id := app.song.ID(); id != app.id {
 		app.id = id
@@ -134,13 +127,13 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 		app.Resize()
 		app.Update()
 		return true
-	case *event.Player:
+	case *EventPlayer:
 		app.Update()
 		return true
-	case *event.Ping:
+	case *EventPing:
 		app.client.Ping()
 		return true
-	case *event.Function:
+	case *EventFunction:
 		if config.Debug {
 			log.Println(
 				"event: *event.Function: ev.Func:",
@@ -155,7 +148,7 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 
 // postFunc runs function fn in the event loop. uses an unbuffered channel.
 func (app *Application) postFunc(fn func()) {
-	app.events <- event.NewFunctionEvent(fn)
+	app.events <- NewEventFunction(fn)
 }
 
 // SetView updates the views of subwidgets.
@@ -172,7 +165,7 @@ func (app *Application) SetView(view views.View) {
 }
 
 // lyrics fetches lyrics using information from song.
-func (app *Application) lyrics(song song.Song) ([]time.Duration, []string) {
+func (app *Application) lyrics(song Song) ([]time.Duration, []string) {
 	if r, err := os.Open(
 		path.Join(app.cfg.LyricsDir, app.song.LRCFile()),
 	); err != nil {
@@ -219,7 +212,7 @@ func (app *Application) Run() (err error) {
 
 	go app.Screen.ChannelEvents(app.events, app.quit)
 	go app.watcher.PostEvents(app.events, app.quit)
-	go event.PostTickerEvents(app.events, 5*time.Second, event.NewPingEvent, app.quit)
+	go sendNewEventEvery(app.events, NewEventPing, 5*time.Second, app.quit)
 
 	for ev := range app.events {
 		app.HandleEvent(ev)

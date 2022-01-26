@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-var testCases = []struct {
+var tests = []struct {
 	lrc   string
 	times []time.Duration
 	lines []string
@@ -59,10 +59,18 @@ func parseDuration(text string) (du time.Duration) {
 }
 
 func TestParseString(t *testing.T) {
-	for _, cs := range testCases {
-		times, lines, err := ParseString(cs.lrc)
-		if err != nil || !reflect.DeepEqual(times, cs.times) || !reflect.DeepEqual(lines, cs.lines) {
-			t.Errorf("ParseString(%q) != %v, %v, got = %v, %v", cs.lrc, cs.times, cs.lines, times, lines)
+	for i := range tests {
+		times, lines, err := ParseString(tests[i].lrc)
+		if err != nil || !reflect.DeepEqual(times, tests[i].times) || !reflect.DeepEqual(lines, tests[i].lines) {
+			t.Errorf("ParseString(%q) != %v, %v, got = %v, %v", tests[i].lrc, tests[i].times, tests[i].lines, times, lines)
+		}
+	}
+}
+
+func BenchmarkParseString(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for i := range tests {
+			ParseString(tests[i].lrc)
 		}
 	}
 }

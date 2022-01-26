@@ -9,7 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2/views"
 )
 
-type ProgressWidget struct {
+type WidgetProgress struct {
 	sync.RWMutex
 
 	postFunc func(fn func())
@@ -27,11 +27,11 @@ type ProgressWidget struct {
 		*time.Timer
 	}
 	id   string
-	quit chan struct{}
+	quit <-chan struct{}
 }
 
-func NewProgressWidget(postFunc func(fn func()), quit chan struct{}) *ProgressWidget {
-	return &ProgressWidget{
+func NewProgressWidget(postFunc func(fn func()), quit <-chan struct{}) *WidgetProgress {
+	return &WidgetProgress{
 		postFunc: postFunc,
 		quit:     quit,
 		runes:    [3]rune{'=', '>', '-'},
@@ -43,7 +43,7 @@ func NewProgressWidget(postFunc func(fn func()), quit chan struct{}) *ProgressWi
 	}
 }
 
-func (w *ProgressWidget) Cancel() {
+func (w *WidgetProgress) Cancel() {
 	w.toCall.Lock()
 	defer w.toCall.Unlock()
 	if w.toCall.Timer != nil {
@@ -51,7 +51,7 @@ func (w *ProgressWidget) Cancel() {
 	}
 }
 
-func (w *ProgressWidget) Update(
+func (w *WidgetProgress) Update(
 	playing bool,
 	id string,
 	elapsed time.Duration,
@@ -67,10 +67,8 @@ func (w *ProgressWidget) Update(
 	defer w.RUnlock()
 
 	select {
-	case _, ok := <-w.quit:
-		if !ok {
-			return
-		}
+	case <-w.quit:
+		return
 	default:
 		if w.id != id || w.elapsedX >= w.totalX {
 			return
@@ -86,15 +84,13 @@ func (w *ProgressWidget) Update(
 	}
 }
 
-func (w *ProgressWidget) update(id string, d time.Duration) {
+func (w *WidgetProgress) update(id string, d time.Duration) {
 	w.RLock()
 	defer w.RUnlock()
 
 	select {
-	case _, ok := <-w.quit:
-		if !ok {
-			return
-		}
+	case <-w.quit:
+		return
 	default:
 		if w.id != id || w.elapsedX >= w.totalX {
 			return
@@ -113,7 +109,7 @@ func (w *ProgressWidget) update(id string, d time.Duration) {
 	})
 }
 
-func (w *ProgressWidget) Draw() {
+func (w *WidgetProgress) Draw() {
 	w.RLock()
 	defer w.RUnlock()
 	w.view.Fill(' ', tcell.StyleDefault)
@@ -126,23 +122,23 @@ func (w *ProgressWidget) Draw() {
 	}
 }
 
-func (w *ProgressWidget) SetView(view views.View) {
+func (w *WidgetProgress) SetView(view views.View) {
 	w.Lock()
 	w.view = view
 	w.Unlock()
 }
 
-func (w *ProgressWidget) Resize() {
+func (w *WidgetProgress) Resize() {
 	w.Lock()
 	w.totalX, _ = w.view.Size()
 	w.Unlock()
 }
 
-func (w *ProgressWidget) Size() (int, int) {
+func (w *WidgetProgress) Size() (int, int) {
 	w.RLock()
 	defer w.RUnlock()
 	x, _ := w.view.Size()
 	return x, 1
 }
 
-func (*ProgressWidget) HandleEvent(tcell.Event) bool { return false }
+func (*WidgetProgress) HandleEvent(tcell.Event) bool { return false }

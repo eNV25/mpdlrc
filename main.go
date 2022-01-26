@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -23,6 +24,10 @@ func main() {
 	defer func() {
 		os.Exit(exitCode)
 	}()
+
+	if config.Debug {
+		go http.ListenAndServe("localhost:6060", nil)
+	}
 
 	args := os.Args[1:]
 	cfg := config.DefaultConfig()
@@ -74,8 +79,7 @@ func main() {
 			}
 			continue
 		}
-		err = toml.NewDecoder(f).Decode(cfg)
-		if err != nil {
+		if err := toml.NewDecoder(f).Decode(cfg); err != nil {
 			fmt.Fprintln(os.Stderr, "decode config file:", err)
 		}
 		f.Close()
@@ -95,7 +99,7 @@ func main() {
 
 	log.SetFlags(0)
 
-	if config.Debug {
+	if config.Debug && false {
 		var logBuilder strings.Builder
 		log.SetOutput(&logBuilder)
 		defer fmt.Fprint(os.Stderr, &logBuilder)

@@ -10,14 +10,12 @@ import (
 	"github.com/neeharvi/textwidth"
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
-
-	"github.com/env25/mpdlrc/internal/app/widget"
 )
 
-var _ widget.Widget = &LyricsWidget{}
+var _ Widget = &WidgetLyrics{}
 
 // LyricsWidget is a Widget implementation.
-type LyricsWidget struct {
+type WidgetLyrics struct {
 	sync.RWMutex
 	postFunc func(fn func())
 
@@ -29,12 +27,12 @@ type LyricsWidget struct {
 		*time.Timer
 	}
 	id   string
-	quit chan struct{}
+	quit <-chan struct{}
 }
 
 // NewLyricsWidget allocates new LyricsWidget.
-func NewLyricsWidget(postFunc func(fn func()), quit chan struct{}) *LyricsWidget {
-	w := &LyricsWidget{
+func NewLyricsWidget(postFunc func(fn func()), quit <-chan struct{}) *WidgetLyrics {
+	w := &WidgetLyrics{
 		postFunc: postFunc,
 		quit:     quit,
 	}
@@ -43,7 +41,7 @@ func NewLyricsWidget(postFunc func(fn func()), quit chan struct{}) *LyricsWidget
 	return w
 }
 
-func (w *LyricsWidget) Cancel() {
+func (w *WidgetLyrics) Cancel() {
 	w.toCall.Lock()
 	defer w.toCall.Unlock()
 	if w.toCall.Timer != nil {
@@ -51,7 +49,7 @@ func (w *LyricsWidget) Cancel() {
 	}
 }
 
-func (w *LyricsWidget) Update(
+func (w *WidgetLyrics) Update(
 	playing bool,
 	id string,
 	elapsed time.Duration,
@@ -88,10 +86,8 @@ func (w *LyricsWidget) Update(
 	}
 
 	select {
-	case _, ok := <-w.quit:
-		if !ok {
-			return
-		}
+	case <-w.quit:
+		return
 	default:
 		if w.id != id {
 			return
@@ -108,7 +104,7 @@ func (w *LyricsWidget) Update(
 	}
 }
 
-func (w *LyricsWidget) update(
+func (w *WidgetLyrics) update(
 	id string,
 	times []time.Duration,
 	lines []string,
@@ -120,10 +116,8 @@ func (w *LyricsWidget) update(
 	defer w.RUnlock()
 
 	select {
-	case _, ok := <-w.quit:
-		if !ok {
-			return
-		}
+	case <-w.quit:
+		return
 	default:
 		if w.id != id || index >= (total-1) {
 			return
@@ -142,7 +136,7 @@ func (w *LyricsWidget) update(
 	})
 }
 
-func (w *LyricsWidget) updateModel(lines []string, index int) {
+func (w *WidgetLyrics) updateModel(lines []string, index int) {
 	m := &lyricsModel{}
 
 	x, y := w.view.Size()
@@ -249,30 +243,30 @@ func (m *lyricsModel) GetCursor() (int, int, bool, bool) { return 0, 0, false, f
 func (m *lyricsModel) MoveCursor(int, int)               { return }
 func (m *lyricsModel) SetCursor(int, int)                { return }
 
-func (w *LyricsWidget) SetView(view views.View) {
+func (w *WidgetLyrics) SetView(view views.View) {
 	w.Lock()
 	w.view = view
 	w.cellView.SetView(view)
 	w.Unlock()
 }
 
-func (w *LyricsWidget) Draw() {
+func (w *WidgetLyrics) Draw() {
 	w.RLock()
 	defer w.RUnlock()
 	w.cellView.Draw()
 }
 
-func (w *LyricsWidget) Resize() {
+func (w *WidgetLyrics) Resize() {
 	w.Lock()
 	w.cellView.Resize()
 	w.Unlock()
 }
 
-func (w *LyricsWidget) HandleEvent(ev tcell.Event) bool {
+func (w *WidgetLyrics) HandleEvent(ev tcell.Event) bool {
 	return false
 }
 
-func (w *LyricsWidget) Size() (int, int) {
+func (w *WidgetLyrics) Size() (int, int) {
 	w.RLock()
 	defer w.RUnlock()
 	return w.cellView.Size()

@@ -38,14 +38,14 @@ func ParseReader(reader io.Reader) ([]Duration, []Text, error) {
 	scnnr := bufio.NewScanner(reader)
 	//scnnr.Split(bufio.ScanLines)
 	for rp := 0; scnnr.Scan(); {
-		ll := scnnr.Bytes()
+		ll := scnnr.Text()
 		// [00:00.00][00:00.00]text -> [00:00.00]text -> text
 		for len(ll) >= 10 && ll[0] == '[' && isdd(ll[1], ll[2]) && ll[3] == ':' && isdd(ll[4], ll[5]) && ll[6] == '.' && isdd(ll[7], ll[8]) && ll[9] == ']' {
 			times = append(times, (ddtoD(ll[1], ll[2])*time.Minute + ddtoD(ll[4], ll[5])*time.Second + ddtoD(ll[7], ll[8])*time.Second/100))
 			ll = ll[10:]
 			rp++
 		}
-		for ll := string(ll); rp > 0; rp-- {
+		for ; rp > 0; rp-- {
 			lines = append(lines, ll)
 		}
 	}
