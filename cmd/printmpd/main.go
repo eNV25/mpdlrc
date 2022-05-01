@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/env25/mpdlrc/internal"
 	"github.com/spf13/pflag"
+
+	"github.com/env25/mpdlrc/internal"
 )
 
 func main() {

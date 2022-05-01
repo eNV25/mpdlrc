@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/env25/mpdlrc/lrc"
 	"github.com/spf13/pflag"
+
+	"github.com/env25/mpdlrc/lrc"
 )
 
 func main() {
