@@ -11,9 +11,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-var (
-	ErrAlreadyClosed = errors.New("MPDClient: already closed")
-)
+var ErrAlreadyClosed = errors.New("MPDClient: already closed")
 
 type MPDClient struct {
 	client              *mpd.Client

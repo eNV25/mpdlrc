@@ -2,7 +2,9 @@
 
 package internal
 
-type Client = ClientInterface
-type Watcher = WatcherInterface
-type Song = SongInterface
-type Status = StatusInterface
+type (
+	Client  = ClientInterface
+	Watcher = WatcherInterface
+	Song    = SongInterface
+	Status  = StatusInterface
+)
