@@ -3,12 +3,12 @@ package config
 import (
 	"os"
 	"os/user"
-	"path"
+	"path/filepath"
 )
 
 func ConfigDir() string {
 	if c, ok := os.LookupEnv("XDG_CONFIG_HOME"); !ok {
-		return path.Join(HomeDir(), ".config")
+		return filepath.Join(HomeDir(), ".config")
 	} else {
 		return c
 	}
@@ -27,10 +27,13 @@ func HomeDir() string {
 }
 
 func HomeDirUser(usr string) string {
+	if usr == "" {
+		return HomeDir()
+	}
 	if u, err := user.Lookup(usr); err != nil {
 		// fallback
 		// path.Dir("/home/user") => "/home"
-		return path.Join(path.Dir(HomeDir()), usr)
+		return filepath.Join(filepath.Dir(HomeDir()), usr)
 	} else {
 		return u.HomeDir
 	}

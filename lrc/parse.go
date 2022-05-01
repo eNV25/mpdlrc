@@ -10,8 +10,10 @@ import (
 
 // NOTE: The parser simply ignores all unmatched lines and doen't return any parse errors.
 
-type Duration = time.Duration
-type Text = string
+type (
+	Duration = time.Duration
+	Text     = string
+)
 
 // Parse parses a byte slice of LRC lyrics.
 func Parse(data []byte) ([]Duration, []Text, error) {
@@ -36,7 +38,7 @@ func ParseReader(reader io.Reader) ([]Duration, []Text, error) {
 	times := make([]Duration, 0)
 	lines := make([]Text, 0)
 	scnnr := bufio.NewScanner(reader)
-	//scnnr.Split(bufio.ScanLines)
+	// scnnr.Split(bufio.ScanLines)
 	for rp := 0; scnnr.Scan(); {
 		ll := scnnr.Text()
 		// [00:00.00][00:00.00]text -> [00:00.00]text -> text

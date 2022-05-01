@@ -1,23 +1,28 @@
 package config
 
 import (
+	"os/user"
 	"reflect"
 	"testing"
 )
 
-var expandTildeCases = []struct {
-	in  string
-	out string
-}{
-	{"~/directory", HomeDir() + "/directory"},
-	{"~root/directory", HomeDirUser("root") + "/directory"},
-}
-
 func TestExpandTilde(t *testing.T) {
-	for _, c := range expandTildeCases {
-		exp := expandTilde(c.in)
-		if !reflect.DeepEqual(exp, c.out) {
-			t.Errorf("expandTilde(%q) => %q, expected => %q", c.in, exp, c.out)
+	current, _ := user.Current()
+
+	for _, c := range [...]*struct {
+		in  string
+		out string
+	}{
+		{"", ""},
+		{"~", HomeDir()},
+		{"~/", HomeDir()},
+		{"~/directory/", HomeDir() + "/directory"},
+		{"~/directory/file", HomeDir() + "/directory/file"},
+		{"~" + current.Username + "/directory", HomeDirUser(current.Username) + "/directory"},
+	} {
+		out := expandTilde(c.in)
+		if !reflect.DeepEqual(out, c.out) {
+			t.Errorf("expandTilde(%q) => %q, expected => %q", c.in, out, c.out)
 		}
 	}
 }

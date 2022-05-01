@@ -1,9 +1,12 @@
 package config
 
-import "path"
-
-var (
-	ConfigFiles = []string{
-		path.Join(ConfigDir(), "mpdlrc/config.toml"),
-	}
+import (
+	"os"
+	"path/filepath"
 )
+
+func ConfigFiles() []string {
+	return []string{
+		filepath.Join(ConfigDir(), "mpdlrc"+string(os.PathSeparator)+"config.toml"),
+	}
+}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"strings"
 
@@ -25,12 +24,11 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
-	if config.Debug {
-		go http.ListenAndServe("localhost:6060", nil)
-	}
-
-	args := os.Args[1:]
-	cfg := config.DefaultConfig()
+	var (
+		args        = os.Args[1:]
+		cfg         = config.DefaultConfig()
+		configFiles = config.ConfigFiles()
+	)
 
 	flags_cfg := pflag.NewFlagSet(PROGNAME, pflag.ContinueOnError)
 	flags_cfg.SortFlags = false
@@ -52,10 +50,10 @@ func main() {
 
 	flags.BoolVar(&flag_dumpcfg, `dump-config`, false, `dump final config`)
 	flags.BoolVarP(&flag_usage, `help`, `h`, false, `display this help and exit`)
-	flags.StringArrayVar(&config.ConfigFiles, `config`, config.ConfigFiles, `use config file`)
+	flags.StringArrayVar(&configFiles, `config`, configFiles, `use config file`)
 
 	flags_cfg.VisitAll(func(f *pflag.Flag) {
-		flags.Var((*fakeStringValue)(&f.DefValue), f.Name, f.Usage)
+		flags.Var((*fakeValue)(f), f.Name, f.Usage)
 	})
 
 	if err := flags.Parse(args); err != nil {
@@ -71,7 +69,7 @@ func main() {
 		return
 	}
 
-	for _, fpath := range config.ConfigFiles {
+	for _, fpath := range configFiles {
 		f, err := os.Open(fpath)
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
@@ -85,27 +83,26 @@ func main() {
 		f.Close()
 	}
 
-	flags_cfg.Parse(args)
+	_ = flags_cfg.Parse(args)
 
 	cfg.Expand()
 
+	var logBuilder strings.Builder
+	defer fmt.Fprint(os.Stderr, &logBuilder)
+
 	if flag_dumpcfg {
-		var b strings.Builder
-		toml.NewEncoder(&b).Encode(cfg)
-		fmt.Fprint(os.Stdout, b.String())
+		_ = toml.NewEncoder(&logBuilder).Encode(cfg)
 		exitCode = 0
 		return
 	}
 
-	log.SetFlags(0)
-
-	if config.Debug && false {
-		var logBuilder strings.Builder
+	if config.Debug {
 		log.SetOutput(&logBuilder)
-		defer fmt.Fprint(os.Stderr, &logBuilder)
 	} else {
 		log.SetOutput(io.Discard)
 	}
+
+	log.SetFlags(0)
 
 	if err := internal.NewApplication(cfg).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -114,8 +111,8 @@ func main() {
 	}
 }
 
-type fakeStringValue string
+type fakeValue pflag.Flag
 
-func (*fakeStringValue) Set(string) error { return nil }
-func (*fakeStringValue) Type() string     { return "string" }
-func (v *fakeStringValue) String() string { return string(*v) }
+func (*fakeValue) Set(string) error { return nil }
+func (v *fakeValue) Type() string   { return v.Value.Type() }
+func (v *fakeValue) String() string { return v.DefValue }

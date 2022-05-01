@@ -186,7 +186,6 @@ func (app *Application) Quit() {
 
 // Run the application.
 func (app *Application) Run() (err error) {
-
 	app.Screen, err = tcell.NewScreen()
 	if err != nil {
 		goto quit
