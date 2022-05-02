@@ -2,20 +2,20 @@ package internal
 
 import (
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
+
+	"github.com/env25/mpdlrc/internal/util"
 )
 
 type WidgetProgress struct {
-	sync.RWMutex
-
 	postFunc func(fn func())
 
 	view views.View
 
+	duration time.Duration
 	elapsedX int
 	totalX   int
 	offsetY  int
@@ -23,7 +23,7 @@ type WidgetProgress struct {
 	styles   [3]tcell.Style
 
 	toCall struct {
-		sync.Mutex
+		once util.Once
 		*time.Timer
 	}
 	id   string
@@ -44,8 +44,6 @@ func NewProgressWidget(postFunc func(fn func()), quit <-chan struct{}) *WidgetPr
 }
 
 func (w *WidgetProgress) Cancel() {
-	w.toCall.Lock()
-	defer w.toCall.Unlock()
 	if w.toCall.Timer != nil {
 		w.toCall.Stop()
 	}
@@ -57,26 +55,21 @@ func (w *WidgetProgress) Update(
 	elapsed time.Duration,
 	duration time.Duration,
 ) {
-	w.Lock()
 	w.id = id
-	d := duration / time.Duration(w.totalX)
-	w.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * d) >= elapsed })
-	w.Unlock()
-
-	w.RLock()
-	defer w.RUnlock()
+	w.duration = duration / time.Duration(w.totalX)
+	w.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * w.duration) >= elapsed })
 
 	select {
 	case <-w.quit:
 		return
 	default:
-		if w.id != id || w.elapsedX >= w.totalX {
+		if w.elapsedX >= w.totalX {
 			return
 		}
 	}
 
 	if playing {
-		go w.update(id, d)
+		go w.update()
 	} else {
 		go func() {
 			w.postFunc(w.Draw)
@@ -84,34 +77,29 @@ func (w *WidgetProgress) Update(
 	}
 }
 
-func (w *WidgetProgress) update(id string, d time.Duration) {
-	w.RLock()
-	defer w.RUnlock()
-
+func (w *WidgetProgress) update() {
 	select {
 	case <-w.quit:
 		return
 	default:
-		if w.id != id || w.elapsedX >= w.totalX {
+		if w.elapsedX >= w.totalX {
 			return
 		}
 	}
 
-	w.postFunc(w.Draw)
+	go w.postFunc(w.Draw)
 
-	w.toCall.Lock()
-	defer w.toCall.Unlock()
-	w.toCall.Timer = time.AfterFunc(d, func() {
-		w.Lock()
-		w.elapsedX += 1
-		w.Unlock()
-		w.update(id, d)
-	})
+	if !w.toCall.once.Do(func() {
+		w.toCall.Timer = time.AfterFunc(w.duration, func() {
+			w.elapsedX += 1
+			w.update()
+		})
+	}) {
+		w.toCall.Reset(w.duration)
+	}
 }
 
 func (w *WidgetProgress) Draw() {
-	w.RLock()
-	defer w.RUnlock()
 	w.view.Fill(' ', tcell.StyleDefault)
 	for x := 0; x < w.elapsedX; x++ {
 		w.view.SetContent(x, w.offsetY, w.runes[0], nil, w.styles[0])
@@ -123,20 +111,14 @@ func (w *WidgetProgress) Draw() {
 }
 
 func (w *WidgetProgress) SetView(view views.View) {
-	w.Lock()
 	w.view = view
-	w.Unlock()
 }
 
 func (w *WidgetProgress) Resize() {
-	w.Lock()
 	w.totalX, _ = w.view.Size()
-	w.Unlock()
 }
 
 func (w *WidgetProgress) Size() (int, int) {
-	w.RLock()
-	defer w.RUnlock()
 	x, _ := w.view.Size()
 	return x, 1
 }
