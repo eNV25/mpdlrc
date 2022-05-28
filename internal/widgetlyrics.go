@@ -8,7 +8,6 @@ import (
 	"github.com/gdamore/tcell/v2/views"
 	"github.com/neeharvi/textwidth"
 	"github.com/rivo/uniseg"
-	"golang.org/x/text/unicode/norm"
 
 	"github.com/env25/mpdlrc/internal/util"
 )
@@ -63,10 +62,6 @@ func (w *WidgetLyrics) Update(
 	w.elapsed = elapsed
 	w.times = times
 	w.lines = lines
-
-	for i := range w.lines {
-		w.lines[i] = norm.NFC.String(w.lines[i])
-	}
 
 	w.total = len(w.lines)
 

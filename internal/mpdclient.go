@@ -4,11 +4,11 @@ import (
 	"errors"
 	"path"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"github.com/fhs/gompd/v2/mpd"
 	"github.com/gdamore/tcell/v2"
+	"go.uber.org/atomic"
 )
 
 var ErrAlreadyClosed = errors.New("MPDClient: already closed")
@@ -17,7 +17,7 @@ type MPDClient struct {
 	client              *mpd.Client
 	net, addr, password string
 
-	_closed uintptr // atomic
+	closed atomic.Bool
 }
 
 var _ ClientInterface = &MPDClient{}
@@ -32,45 +32,41 @@ func NewMPDClient(net, addr, password string) *MPDClient {
 	}
 }
 
-func (c *MPDClient) closed() bool { return atomic.LoadUintptr(&c._closed) != 0 }
-
-func (c *MPDClient) setClosed() bool { return atomic.CompareAndSwapUintptr(&c._closed, 0, 1) }
-
 func (c *MPDClient) Start() (err error) {
 	c.client, err = mpd.DialAuthenticated(c.net, c.addr, c.password)
 	return
 }
 
 func (c *MPDClient) Pause() {
-	if c.closed() {
+	if c.closed.Load() {
 		return
 	}
 	_ = c.client.Pause(true)
 }
 
 func (c *MPDClient) Play() {
-	if c.closed() {
+	if c.closed.Load() {
 		return
 	}
 	_ = c.client.Pause(false)
 }
 
 func (c *MPDClient) Ping() {
-	if c.closed() {
+	if c.closed.Load() {
 		return
 	}
 	_ = c.client.Ping()
 }
 
 func (c *MPDClient) Stop() error {
-	if !c.setClosed() {
+	if c.closed.Swap(true) {
 		return ErrAlreadyClosed
 	}
 	return c.client.Close()
 }
 
 func (c *MPDClient) NowPlaying() Song {
-	if c.closed() {
+	if c.closed.Load() {
 		return nil
 	}
 	if attrs, err := c.client.CurrentSong(); err != nil || attrs == nil {
@@ -81,7 +77,7 @@ func (c *MPDClient) NowPlaying() Song {
 }
 
 func (c *MPDClient) Status() Status {
-	if c.closed() {
+	if c.closed.Load() {
 		return nil
 	}
 	if attrs, err := c.client.Status(); err != nil || attrs == nil {

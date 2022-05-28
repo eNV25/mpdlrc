@@ -17,6 +17,10 @@ import (
 
 const PROGNAME = "mpdlrc"
 
+func init() {
+	log.SetFlags(0)
+}
+
 func main() {
 	exitCode := 0
 
@@ -57,14 +61,14 @@ func main() {
 	})
 
 	if err := flags.Parse(args); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		exitCode = 1
 		return
 	}
 
 	if flag_usage {
-		fmt.Println("Usage of " + PROGNAME + ":")
-		fmt.Print(flags.FlagUsages())
+		log.Println("Usage of " + PROGNAME + ":")
+		log.Print(flags.FlagUsages())
 		exitCode = 0
 		return
 	}
@@ -73,12 +77,12 @@ func main() {
 		f, err := os.Open(fpath)
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
-				fmt.Fprintln(os.Stderr, "open config file:", err)
+				log.Println("open config file:", err)
 			}
 			continue
 		}
 		if err := toml.NewDecoder(f).Decode(cfg); err != nil {
-			fmt.Fprintln(os.Stderr, "decode config file:", err)
+			log.Println("decode config file:", err)
 		}
 		f.Close()
 	}
@@ -88,13 +92,8 @@ func main() {
 	cfg.Expand()
 
 	var logBuilder strings.Builder
-	defer fmt.Fprint(os.Stderr, &logBuilder)
 
-	if flag_dumpcfg {
-		_ = toml.NewEncoder(&logBuilder).Encode(cfg)
-		exitCode = 0
-		return
-	}
+	defer fmt.Fprint(os.Stderr, &logBuilder)
 
 	if config.Debug {
 		log.SetOutput(&logBuilder)
@@ -102,16 +101,24 @@ func main() {
 		log.SetOutput(io.Discard)
 	}
 
-	log.SetFlags(0)
+	if flag_dumpcfg {
+		_ = toml.NewEncoder(&logBuilder).Encode(cfg)
+		exitCode = 0
+		return
+	}
 
 	if err := internal.NewApplication(cfg).Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		log.Println(err)
 		exitCode = 1
 		return
 	}
+
+	exitCode = 0
 }
 
 type fakeValue pflag.Flag
+
+var _ pflag.Value = (*fakeValue)(nil)
 
 func (*fakeValue) Set(string) error { return nil }
 func (v *fakeValue) Type() string   { return v.Value.Type() }
