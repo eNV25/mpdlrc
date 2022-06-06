@@ -15,8 +15,8 @@ import (
 	"github.com/env25/mpdlrc/lrc"
 )
 
-// Application struct. It embeds and overrides views.Application. It also implemets views.Widget
-// so that it can be used as the root Widget. Call (*Application).Run to run.
+// Application struct. It implemets views.Widget so that it can be used as the root Widget.
+// Call (*Application).Run to run.
 type Application struct {
 	tcell.Screen
 
@@ -52,8 +52,8 @@ func NewApplication(cfg *config.Config) *Application {
 	app.client = NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 	app.watcher = NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 
-	app.lyricsw = NewLyricsWidget(app.postFunc, app.quit)
-	app.progressw = NewProgressWidget(app.postFunc, app.quit)
+	app.lyricsw = NewWidgetLyrics(app.postFunc, app.quit)
+	app.progressw = NewWidgetProgress(app.postFunc, app.quit)
 	app.focused = app.lyricsw
 
 	return app

@@ -22,7 +22,7 @@ type WidgetLyrics struct {
 	cellView *views.CellView
 
 	toCall struct {
-		once util.Once
+		util.Once
 		*time.Timer
 	}
 
@@ -35,8 +35,8 @@ type WidgetLyrics struct {
 	quit <-chan struct{}
 }
 
-// NewLyricsWidget allocates new LyricsWidget.
-func NewLyricsWidget(postFunc func(fn func()), quit <-chan struct{}) *WidgetLyrics {
+// NewWidgetLyrics allocates new LyricsWidget.
+func NewWidgetLyrics(postFunc func(fn func()), quit <-chan struct{}) *WidgetLyrics {
 	w := &WidgetLyrics{
 		postFunc: postFunc,
 		quit:     quit,
@@ -74,7 +74,7 @@ func (w *WidgetLyrics) Update(
 
 		w.index = 0
 		w.total = 1
-		lines = make([]string, 1)
+		w.lines = make([]string, 1)
 		playing = false
 	} else {
 		// select previous line
@@ -91,7 +91,7 @@ func (w *WidgetLyrics) Update(
 		go w.update()
 	} else {
 		go func() {
-			w.updateModel(lines, w.index)
+			w.updateModel()
 			go w.postFunc(w.Draw)
 		}()
 	}
@@ -107,10 +107,10 @@ func (w *WidgetLyrics) update() {
 		}
 	}
 
-	w.updateModel(w.lines, w.index)
+	w.updateModel()
 	go w.postFunc(w.Draw)
 
-	if !w.toCall.once.Do(func() {
+	if !w.toCall.Once.Do(func() {
 		w.toCall.Timer = time.AfterFunc((w.times[w.index+1] - w.elapsed), func() {
 			w.index += 1
 			w.elapsed = w.times[w.index]
@@ -121,7 +121,7 @@ func (w *WidgetLyrics) update() {
 	}
 }
 
-func (w *WidgetLyrics) updateModel(lines []string, index int) {
+func (w *WidgetLyrics) updateModel() {
 	m := &lyricsModel{}
 
 	x, y := w.view.Size()
@@ -132,8 +132,8 @@ func (w *WidgetLyrics) updateModel(lines []string, index int) {
 	m.height = y + 1
 
 	// nothing is highlighted when index is -1 like it should
-	i1 := index - mid
-	i2 := index + mid + 1
+	i1 := w.index - mid
+	i2 := w.index + mid + 1
 
 	hlStyle := tcell.StyleDefault.Attributes(tcell.AttrBold | tcell.AttrReverse)
 
@@ -149,8 +149,8 @@ func (w *WidgetLyrics) updateModel(lines []string, index int) {
 		row++
 	}
 
-	for i := i1; i < i2 && i < len(lines); i++ {
-		width := textwidth.WidthString(lines[i])
+	for i := i1; i < i2 && i < len(w.lines); i++ {
+		width := textwidth.WidthString(w.lines[i])
 		off := (x - width) / 2
 		if off < 0 {
 			off = 0
@@ -174,7 +174,7 @@ func (w *WidgetLyrics) updateModel(lines []string, index int) {
 			cell += 1
 		}
 
-		graphemes := uniseg.NewGraphemes(lines[i])
+		graphemes := uniseg.NewGraphemes(w.lines[i])
 
 		for graphemes.Next() {
 			runes := graphemes.Runes()
@@ -223,8 +223,8 @@ func (m *lyricsModel) GetCell(x, y int) (rune, tcell.Style, []rune, int) {
 }
 func (m *lyricsModel) GetBounds() (int, int)             { return m.width, m.height }
 func (m *lyricsModel) GetCursor() (int, int, bool, bool) { return 0, 0, false, false }
-func (m *lyricsModel) MoveCursor(int, int)               { return }
-func (m *lyricsModel) SetCursor(int, int)                { return }
+func (m *lyricsModel) MoveCursor(int, int)               {}
+func (m *lyricsModel) SetCursor(int, int)                {}
 
 func (w *WidgetLyrics) SetView(view views.View) {
 	w.view = view

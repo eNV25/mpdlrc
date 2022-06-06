@@ -3,7 +3,7 @@ package internal
 type State uint
 
 const (
-	stateNone State = iota
+	_ State = iota
 	StatePlay
 	StateStop
 	StatePause

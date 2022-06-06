@@ -46,7 +46,7 @@ func NewEventPlayer() tcell.Event {
 }
 
 func sendNewEventEvery(ch chan<- tcell.Event, newEvent func() tcell.Event, d time.Duration, quit <-chan struct{}) {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(d)
 	defer ticker.Stop()
 	for {
 		select {

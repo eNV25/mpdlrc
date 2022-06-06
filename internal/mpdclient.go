@@ -11,7 +11,7 @@ import (
 	"go.uber.org/atomic"
 )
 
-var ErrAlreadyClosed = errors.New("MPDClient: already closed")
+var ErrMPDClientAlreadyClosed = errors.New("MPDClient: already closed")
 
 type MPDClient struct {
 	client              *mpd.Client
@@ -60,7 +60,7 @@ func (c *MPDClient) Ping() {
 
 func (c *MPDClient) Stop() error {
 	if c.closed.Swap(true) {
-		return ErrAlreadyClosed
+		return ErrMPDClientAlreadyClosed
 	}
 	return c.client.Close()
 }

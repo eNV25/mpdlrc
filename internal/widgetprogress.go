@@ -23,14 +23,14 @@ type WidgetProgress struct {
 	styles   [3]tcell.Style
 
 	toCall struct {
-		once util.Once
+		util.Once
 		*time.Timer
 	}
 	id   string
 	quit <-chan struct{}
 }
 
-func NewProgressWidget(postFunc func(fn func()), quit <-chan struct{}) *WidgetProgress {
+func NewWidgetProgress(postFunc func(fn func()), quit <-chan struct{}) *WidgetProgress {
 	return &WidgetProgress{
 		postFunc: postFunc,
 		quit:     quit,
@@ -89,7 +89,7 @@ func (w *WidgetProgress) update() {
 
 	go w.postFunc(w.Draw)
 
-	if !w.toCall.once.Do(func() {
+	if !w.toCall.Once.Do(func() {
 		w.toCall.Timer = time.AfterFunc(w.duration, func() {
 			w.elapsedX += 1
 			w.update()
