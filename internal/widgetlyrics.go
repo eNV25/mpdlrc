@@ -2,6 +2,7 @@ package internal
 
 import (
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -18,6 +19,7 @@ var _ Widget = &WidgetLyrics{}
 type WidgetLyrics struct {
 	postFunc func(fn func())
 
+	sync.Mutex
 	view     views.View
 	cellView *views.CellView
 
@@ -47,6 +49,8 @@ func NewWidgetLyrics(postFunc func(fn func()), quit <-chan struct{}) *WidgetLyri
 }
 
 func (w *WidgetLyrics) Cancel() {
+	w.Lock()
+	defer w.Unlock()
 	if w.toCall.Timer != nil {
 		w.toCall.Stop()
 	}
@@ -59,14 +63,17 @@ func (w *WidgetLyrics) Update(
 	times []time.Duration,
 	lines []string,
 ) {
+	w.Lock()
+	defer w.Unlock()
+
 	w.elapsed = elapsed
 	w.times = times
 	w.lines = lines
 
 	w.total = len(w.lines)
 
-	// This is index is the first line after the one to be displayed.
-	w.index = sort.Search(w.total, func(i int) bool { return w.times[i] >= w.elapsed })
+	// This index is the first line after the one to be displayed.
+	w.index = sort.Search(w.total, func(i int) bool { return w.times[i] > w.elapsed })
 
 	if w.index < 0 || w.index > w.total {
 		// This path is chosen when index is out of bounds for whatever reason.
@@ -88,11 +95,16 @@ func (w *WidgetLyrics) Update(
 	}
 
 	if playing {
-		go w.update()
+		go func() {
+			w.Lock()
+			defer w.Unlock()
+			w.update()
+		}()
 	} else {
 		go func() {
+			w.Lock()
+			defer w.Unlock()
 			w.updateModel()
-			go w.postFunc(w.Draw)
 		}()
 	}
 }
@@ -108,10 +120,11 @@ func (w *WidgetLyrics) update() {
 	}
 
 	w.updateModel()
-	go w.postFunc(w.Draw)
 
 	if !w.toCall.Once.Do(func() {
 		w.toCall.Timer = time.AfterFunc((w.times[w.index+1] - w.elapsed), func() {
+			w.Lock()
+			defer w.Unlock()
 			w.index += 1
 			w.elapsed = w.times[w.index]
 			w.update()
@@ -201,6 +214,7 @@ func (w *WidgetLyrics) updateModel() {
 	}
 
 	w.cellView.SetModel(m)
+	go w.postFunc(w.Draw)
 }
 
 var _ views.CellModel = &lyricsModel{}
@@ -227,15 +241,21 @@ func (m *lyricsModel) MoveCursor(int, int)               {}
 func (m *lyricsModel) SetCursor(int, int)                {}
 
 func (w *WidgetLyrics) SetView(view views.View) {
+	w.Lock()
+	defer w.Unlock()
 	w.view = view
 	w.cellView.SetView(view)
 }
 
 func (w *WidgetLyrics) Draw() {
+	w.Lock()
+	defer w.Unlock()
 	w.cellView.Draw()
 }
 
 func (w *WidgetLyrics) Resize() {
+	w.Lock()
+	defer w.Unlock()
 	w.cellView.Resize()
 }
 
@@ -244,5 +264,7 @@ func (w *WidgetLyrics) HandleEvent(ev tcell.Event) bool {
 }
 
 func (w *WidgetLyrics) Size() (int, int) {
+	w.Lock()
+	defer w.Unlock()
 	return w.cellView.Size()
 }

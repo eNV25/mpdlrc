@@ -2,6 +2,7 @@ package internal
 
 import (
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -13,6 +14,7 @@ import (
 type WidgetProgress struct {
 	postFunc func(fn func())
 
+	sync.Mutex
 	view views.View
 
 	duration time.Duration
@@ -44,6 +46,8 @@ func NewWidgetProgress(postFunc func(fn func()), quit <-chan struct{}) *WidgetPr
 }
 
 func (w *WidgetProgress) Cancel() {
+	w.Lock()
+	defer w.Unlock()
 	if w.toCall.Timer != nil {
 		w.toCall.Stop()
 	}
@@ -55,6 +59,9 @@ func (w *WidgetProgress) Update(
 	elapsed time.Duration,
 	duration time.Duration,
 ) {
+	w.Lock()
+	defer w.Unlock()
+
 	w.id = id
 	w.duration = duration / time.Duration(w.totalX)
 	w.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * w.duration) >= elapsed })
@@ -69,9 +76,15 @@ func (w *WidgetProgress) Update(
 	}
 
 	if playing {
-		go w.update()
+		go func() {
+			w.Lock()
+			defer w.Unlock()
+			w.update()
+		}()
 	} else {
 		go func() {
+			w.Lock()
+			defer w.Unlock()
 			w.postFunc(w.Draw)
 		}()
 	}
@@ -91,6 +104,8 @@ func (w *WidgetProgress) update() {
 
 	if !w.toCall.Once.Do(func() {
 		w.toCall.Timer = time.AfterFunc(w.duration, func() {
+			w.Lock()
+			defer w.Unlock()
 			w.elapsedX += 1
 			w.update()
 		})
@@ -100,6 +115,8 @@ func (w *WidgetProgress) update() {
 }
 
 func (w *WidgetProgress) Draw() {
+	w.Lock()
+	defer w.Unlock()
 	w.view.Fill(' ', tcell.StyleDefault)
 	for x := 0; x < w.elapsedX; x++ {
 		w.view.SetContent(x, w.offsetY, w.runes[0], nil, w.styles[0])
@@ -111,14 +128,20 @@ func (w *WidgetProgress) Draw() {
 }
 
 func (w *WidgetProgress) SetView(view views.View) {
+	w.Lock()
+	defer w.Unlock()
 	w.view = view
 }
 
 func (w *WidgetProgress) Resize() {
+	w.Lock()
+	defer w.Unlock()
 	w.totalX, _ = w.view.Size()
 }
 
 func (w *WidgetProgress) Size() (int, int) {
+	w.Lock()
+	defer w.Unlock()
 	x, _ := w.view.Size()
 	return x, 1
 }
