@@ -46,12 +46,25 @@ func expandTilde(str string) string {
 	switch {
 	case strings.HasPrefix(str, "~"):
 		// ~ or ~/path or ~user/path
-		u, p, _ := strings.Cut(str[1:], string(os.PathSeparator))
+		u, p, _ := stringsCut(str[1:], string(os.PathSeparator))
 		return filepath.Join(HomeDirUser(u), p) // calls filepath.Clean
 	default:
 		// path or /path
 		return str
 	}
+}
+
+// stringsCut slices s around the first instance of sep,
+// returning the text before and after sep.
+// The found result reports whether sep appears in s.
+// If sep does not appear in s, cut returns s, "", false.
+//
+// Copied from standard library to allow build with go pre-1.18
+func stringsCut(s, sep string) (before, after string, found bool) {
+	if i := strings.Index(s, sep); i >= 0 {
+		return s[:i], s[i+len(sep):], true
+	}
+	return s, "", false
 }
 
 // Assert return error if Config is invalid.
