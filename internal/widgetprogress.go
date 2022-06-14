@@ -82,11 +82,7 @@ func (w *WidgetProgress) Update(
 			w.update()
 		}()
 	} else {
-		go func() {
-			w.Lock()
-			defer w.Unlock()
-			w.postFunc(w.Draw)
-		}()
+		go w.postFunc(w.Draw)
 	}
 }
 

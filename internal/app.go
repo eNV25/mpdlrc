@@ -3,7 +3,7 @@ package internal
 import (
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"time"
@@ -167,7 +167,7 @@ func (app *Application) SetView(view views.View) {
 // lyrics fetches lyrics using information from song.
 func (app *Application) lyrics(song Song) ([]time.Duration, []string) {
 	if r, err := os.Open(
-		path.Join(app.cfg.LyricsDir, app.song.LRCFile()),
+		filepath.Join(app.cfg.LyricsDir, app.song.LRCFile()),
 	); err != nil {
 		return make([]time.Duration, 1), make([]string, 1) // blank screen
 	} else {
