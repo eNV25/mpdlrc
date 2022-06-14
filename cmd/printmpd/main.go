@@ -3,20 +3,43 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path"
+	"strconv"
 
+	"github.com/fhs/gompd/v2/mpd"
 	"github.com/spf13/pflag"
-
-	"github.com/env25/mpdlrc/internal"
 )
+
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
 
 func main() {
 	pflag.Parse()
-	var c internal.Client = internal.NewMPDClient("unix", "/run/user/1000/mpd/socket", "")
-	defer c.Stop()
-	c.Start()
-	var ret []byte
-	ret, _ = json.MarshalIndent(c.NowPlaying(), "", "  ")
-	fmt.Printf("%s\n", ret)
-	ret, _ = json.MarshalIndent(c.Status(), "", "  ")
-	fmt.Printf("%s\n", ret)
+
+	c, err := mpd.DialAuthenticated("unix", path.Join("/run/user", strconv.Itoa(os.Geteuid()), "mpd/socket"), "")
+	check(err)
+	defer func() {
+		err = c.Close()
+		check(err)
+	}()
+
+	attrs, err := c.CurrentSong()
+	ret, errr := json.MarshalIndent(attrs, "", "  ")
+	fmt.Printf("%s %v %v\n", ret, err, errr)
+
+	attrs, err = c.Status()
+	ret, errr = json.MarshalIndent(attrs, "", "  ")
+	fmt.Printf("%s %v %v\n", ret, err, errr)
+
+	attrss, err := c.Command("listmounts").AttrsList("mount")
+	ret, errr = json.MarshalIndent(attrss, "", "  ")
+	fmt.Printf("%s %v %v\n", ret, err, errr)
+
+	attrs, err = c.Command("config").Attrs()
+	ret, errr = json.MarshalIndent(attrs, "", "  ")
+	fmt.Printf("%s %v %v\n", ret, err, errr)
 }
