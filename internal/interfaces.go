@@ -7,9 +7,9 @@ import (
 	"github.com/gdamore/tcell/v2/views"
 )
 
-type ClientInterface interface {
-	NowPlaying() Song
-	Status() Status
+type Client interface {
+	NowPlaying() SongType
+	Status() StatusType
 	Ping()
 	Pause()
 	Play()
@@ -17,13 +17,13 @@ type ClientInterface interface {
 	Stop() error
 }
 
-type WatcherInterface interface {
+type Watcher interface {
 	Start() error
 	Stop() error
 	PostEvents(ch chan<- tcell.Event, quit <-chan struct{})
 }
 
-type SongInterface interface {
+type Song interface {
 	ID() string
 	Title() string
 	Artist() string
@@ -32,7 +32,7 @@ type SongInterface interface {
 	LRCFile() string
 }
 
-type StatusInterface interface {
+type Status interface {
 	Duration() time.Duration
 	Elapsed() time.Duration
 	State() State

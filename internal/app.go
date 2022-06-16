@@ -22,10 +22,10 @@ type Application struct {
 
 	cfg *config.Config
 
-	client  Client
-	watcher Watcher
-	song    Song
-	status  Status
+	client  ClientType
+	watcher WatcherType
+	song    SongType
+	status  StatusType
 	times   []time.Duration
 	lines   []string
 	id      string
@@ -165,7 +165,7 @@ func (app *Application) SetView(view views.View) {
 }
 
 // lyrics fetches lyrics using information from song.
-func (app *Application) lyrics(song Song) ([]time.Duration, []string) {
+func (app *Application) lyrics(song SongType) ([]time.Duration, []string) {
 	if r, err := os.Open(
 		filepath.Join(app.cfg.LyricsDir, app.song.LRCFile()),
 	); err != nil {

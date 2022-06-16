@@ -1,8 +1,8 @@
 package internal
 
 type (
-	Client  = *MPDClient
-	Watcher = *MPDWatcher
-	Song    = MPDSong
-	Status  = MPDStatus
+	ClientType  = *MPDClient
+	WatcherType = *MPDWatcher
+	SongType    = MPDSong
+	StatusType  = MPDStatus
 )

@@ -14,13 +14,13 @@ func TestExpandTilde(t *testing.T) {
 		out string
 	}{
 		{"", ""},
-		{"~", HomeDir()},
-		{"~/", HomeDir()},
-		{"~/directory/", HomeDir() + "/directory"},
-		{"~/directory/file", HomeDir() + "/directory/file"},
-		{"~" + current.Username + "/directory", HomeDirUser(current.Username) + "/directory"},
+		{"~", HomeDir("")},
+		{"~/", HomeDir("")},
+		{"~/directory/", HomeDir("") + "/directory"},
+		{"~/directory/file", HomeDir("") + "/directory/file"},
+		{"~" + current.Username + "/directory", HomeDir(current.Username) + "/directory"},
 	} {
-		out := expandTilde(c.in)
+		out := ExpandTilde(c.in)
 		if !reflect.DeepEqual(out, c.out) {
 			t.Errorf("expandTilde(%q) => %q, expected => %q", c.in, out, c.out)
 		}

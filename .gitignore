@@ -17,3 +17,8 @@ bin/*
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# this module binaries
+mpdlrc*
+printmpd*
+printlrc*

@@ -20,7 +20,7 @@ type MPDClient struct {
 	closed atomic.Bool
 }
 
-var _ ClientInterface = &MPDClient{}
+var _ Client = &MPDClient{}
 
 // NewMPDClient returns a pointer to an instance of MPDClient.
 // A password of "" can be used if there is no password.
@@ -65,7 +65,7 @@ func (c *MPDClient) Stop() error {
 	return c.client.Close()
 }
 
-func (c *MPDClient) NowPlaying() Song {
+func (c *MPDClient) NowPlaying() SongType {
 	if c.closed.Load() {
 		return nil
 	}
@@ -76,7 +76,7 @@ func (c *MPDClient) NowPlaying() Song {
 	}
 }
 
-func (c *MPDClient) Status() Status {
+func (c *MPDClient) Status() StatusType {
 	if c.closed.Load() {
 		return nil
 	}
@@ -92,7 +92,7 @@ type MPDWatcher struct {
 	net, addr, password string
 }
 
-var _ WatcherInterface = &MPDWatcher{}
+var _ Watcher = &MPDWatcher{}
 
 func NewMPDWatcher(net, addr, password string) *MPDWatcher {
 	return &MPDWatcher{net: net, addr: addr, password: password}
@@ -126,7 +126,7 @@ func (w *MPDWatcher) PostEvents(ch chan<- tcell.Event, quit <-chan struct{}) {
 
 type MPDSong map[string]string
 
-var _ SongInterface = MPDSong{}
+var _ Song = MPDSong{}
 
 func (s MPDSong) ID() string {
 	return s["Id"]
@@ -155,7 +155,7 @@ func (s MPDSong) LRCFile() string {
 
 type MPDStatus map[string]string
 
-var _ StatusInterface = MPDStatus{}
+var _ Status = MPDStatus{}
 
 func (s MPDStatus) Duration() time.Duration {
 	return secondStringToDuration(s["duration"])

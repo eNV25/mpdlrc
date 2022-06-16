@@ -3,8 +3,8 @@
 package internal
 
 type (
-	Client  = ClientInterface
-	Watcher = WatcherInterface
-	Song    = SongInterface
-	Status  = StatusInterface
+	ClientType  = ClientInterface
+	WatcherType = WatcherInterface
+	SongType    = SongInterface
+	StatusType  = StatusInterface
 )
