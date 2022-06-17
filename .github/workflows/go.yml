@@ -1,26 +1,32 @@
 name: Go
 on:
   push:
+    branches: [master]
   pull_request:
-    types: [opened, reopened]
+    branches: [master]
 jobs:
-  go-unix:
+  go:
     strategy:
       matrix:
-        os-unix: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os-unix }}
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version-file: go.mod
+          cache: true
       - name: Check Format
+        if: matrix.os == 'ubuntu-latest'
         run: |
           go install golang.org/x/tools/cmd/goimports@latest
           go install mvdan.cc/gofumpt@latest
           make checkfmt
       - name: Test
-        run: make test
+        run: |
+          go test -v ./...
       - name: Build
-        run: make build
+        run: |
+          go build -v ./...
+          go build -v -tags=debug ./...
