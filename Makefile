@@ -1,5 +1,5 @@
 
-go.module != awk 'NR == 1 { print $$2 }' go.mod
+go.module != go list -m
 
 build:
 	go build -v -o ./bin/ ./...
