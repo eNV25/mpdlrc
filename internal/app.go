@@ -92,7 +92,8 @@ func (app *Application) Update() {
 
 // Resize is run after a resize event.
 func (app *Application) Resize() {
-	app.SetView(app.Screen)
+	app.progressv.Resize(0, 0, -1, 1)
+	app.lyricsv.Resize(0, 1, -1, -1)
 	app.progressw.Resize()
 	app.lyricsw.Resize()
 }
@@ -164,8 +165,6 @@ func (app *Application) SetView(view views.View) {
 		app.lyricsv = views.NewViewPort(view, 0, 0, 0, 0)
 		app.lyricsw.SetView(app.lyricsv)
 	}
-	app.progressv.Resize(0, 0, -1, 1)
-	app.lyricsv.Resize(0, 1, -1, -1)
 }
 
 // lyrics fetches lyrics using information from song.
@@ -217,6 +216,7 @@ func (app *Application) Run() (err error) {
 	go app.watcher.PostEvents(app.events, app.quit)
 	go sendNewEventEvery(app.events, NewEventPing, 5*time.Second, app.quit)
 
+	app.SetView(app.Screen)
 	for ev := range app.events {
 		app.HandleEvent(ev)
 		app.Show()
