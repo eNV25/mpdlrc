@@ -148,7 +148,11 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 
 // postFunc runs function fn in the event loop. uses an unbuffered channel.
 func (app *Application) postFunc(fn func()) {
-	app.events <- NewEventFunction(fn)
+	select {
+	case <-app.quit:
+		// no-op
+	case app.events <- NewEventFunction(fn):
+	}
 }
 
 // SetView updates the views of subwidgets.

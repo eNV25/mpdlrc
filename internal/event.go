@@ -53,7 +53,11 @@ func sendNewEventEvery(ch chan<- tcell.Event, newEvent func() tcell.Event, d tim
 		case <-quit:
 			return
 		case <-ticker.C:
-			ch <- newEvent()
+			select {
+			case <-quit:
+				return
+			case ch <- newEvent():
+			}
 		}
 	}
 }

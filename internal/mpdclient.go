@@ -117,7 +117,11 @@ func (w *MPDWatcher) PostEvents(ch chan<- tcell.Event, quit <-chan struct{}) {
 				newEvent = NewEventPlayer
 			}
 			if newEvent != nil {
-				ch <- newEvent()
+				select {
+				case <-quit:
+					return
+				case ch <- newEvent():
+				}
 				newEvent = nil
 			}
 		}
