@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/env25/mpdlrc/internal/util"
+	"github.com/env25/mpdlrc/internal/stringsu"
 )
 
 func ConfigDir() string {
@@ -42,7 +42,7 @@ func ExpandTilde(str string) string {
 	switch {
 	case strings.HasPrefix(str, "~"):
 		// ~ or ~/path or ~user/path
-		u, p, _ := util.StringsCut(str[1:], string(os.PathSeparator))
+		u, p, _ := stringsu.Cut(str[1:], string(os.PathSeparator))
 		return filepath.Join(HomeDir(u), p) // calls filepath.Clean
 	default:
 		// path or /path

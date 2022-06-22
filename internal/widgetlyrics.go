@@ -7,34 +7,38 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
-	"github.com/neeharvi/textwidth"
+	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 
-	"github.com/env25/mpdlrc/internal/util"
+	"github.com/env25/mpdlrc/internal/syncu"
 )
 
 var _ Widget = &WidgetLyrics{}
 
 // LyricsWidget is a Widget implementation.
 type WidgetLyrics struct {
-	postFunc func(fn func())
-
-	sync.Mutex
-	view     views.View
-	cellView *views.CellView
+	mu sync.Mutex
 
 	toCall struct {
-		util.Once
+		syncu.Once
 		*time.Timer
 	}
 
+	view     views.View
+	cellView *views.CellView
+
+	widgetLyricsData
+
+	quit     <-chan struct{}
+	postFunc func(fn func())
+}
+
+type widgetLyricsData struct {
 	times   []time.Duration
 	lines   []string
 	elapsed time.Duration
 	index   int
 	total   int
-
-	quit <-chan struct{}
 }
 
 // NewWidgetLyrics allocates new LyricsWidget.
@@ -49,8 +53,8 @@ func NewWidgetLyrics(postFunc func(fn func()), quit <-chan struct{}) *WidgetLyri
 }
 
 func (w *WidgetLyrics) Cancel() {
-	w.Lock()
-	defer w.Unlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	if w.toCall.Timer != nil {
 		w.toCall.Stop()
 	}
@@ -63,8 +67,8 @@ func (w *WidgetLyrics) Update(
 	times []time.Duration,
 	lines []string,
 ) {
-	w.Lock()
-	defer w.Unlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	w.elapsed = elapsed
 	w.times = times
@@ -96,14 +100,14 @@ func (w *WidgetLyrics) Update(
 
 	if playing {
 		go func() {
-			w.Lock()
-			defer w.Unlock()
+			w.mu.Lock()
+			defer w.mu.Unlock()
 			w.update()
 		}()
 	} else {
 		go func() {
-			w.Lock()
-			defer w.Unlock()
+			w.mu.Lock()
+			defer w.mu.Unlock()
 			w.updateModel()
 		}()
 	}
@@ -123,8 +127,8 @@ func (w *WidgetLyrics) update() {
 
 	if !w.toCall.Once.Do(func() {
 		w.toCall.Timer = time.AfterFunc((w.times[w.index+1] - w.elapsed), func() {
-			w.Lock()
-			defer w.Unlock()
+			w.mu.Lock()
+			defer w.mu.Unlock()
 			w.index += 1
 			w.elapsed = w.times[w.index]
 			w.update()
@@ -148,7 +152,10 @@ func (w *WidgetLyrics) updateModel() {
 	i1 := w.index - mid
 	i2 := w.index + mid + 1
 
-	hlStyle := tcell.StyleDefault.Attributes(tcell.AttrBold | tcell.AttrReverse)
+	var (
+		styleDefault tcell.Style
+		styleHl      = styleDefault.Bold(true).Reverse(true)
+	)
 
 	m.maincs = make([][]rune, m.height)
 	m.combcs = make([][][]rune, m.height)
@@ -163,7 +170,7 @@ func (w *WidgetLyrics) updateModel() {
 	}
 
 	for i := i1; i < i2 && i < len(w.lines); i++ {
-		width := textwidth.WidthString(w.lines[i])
+		width := runewidth.StringWidth(w.lines[i])
 		off := (x - width) / 2
 		if off < 0 {
 			off = 0
@@ -187,11 +194,19 @@ func (w *WidgetLyrics) updateModel() {
 			cell += 1
 		}
 
-		graphemes := uniseg.NewGraphemes(w.lines[i])
+		grphms := uniseg.NewGraphemes(w.lines[i])
 
-		for graphemes.Next() {
-			runes := graphemes.Runes()
-			wd := textwidth.WidthRunes(runes)
+		for grphms.Next() {
+			runes := grphms.Runes()
+
+			// wd := runewidth.StringWidth(grphms.Str())
+			wd := 1
+			for _, r := range runes {
+				wd = runewidth.RuneWidth(r)
+				if wd > 0 {
+					break // Our best guess at this point is to use the width of the first non-zero-width rune.
+				}
+			}
 
 			m.maincs[row][cell] = runes[0]
 			m.combcs[row][cell] = runes[1:]
@@ -210,7 +225,7 @@ func (w *WidgetLyrics) updateModel() {
 	}
 
 	for cell := midoff; cell < len(m.maincs[mid]); cell++ {
-		m.styles[mid][cell] = hlStyle
+		m.styles[mid][cell] = styleHl
 	}
 
 	w.cellView.SetModel(m)
@@ -230,8 +245,9 @@ type lyricsModel struct {
 }
 
 func (m *lyricsModel) GetCell(x, y int) (rune, tcell.Style, []rune, int) {
+	var styleDefault tcell.Style
 	if x < 0 || y < 0 || y >= m.height || x >= m.cells[y] {
-		return ' ', tcell.StyleDefault, nil, 1
+		return ' ', styleDefault, nil, 1
 	}
 	return m.maincs[y][x], m.styles[y][x], m.combcs[y][x], m.widths[y][x]
 }
@@ -241,21 +257,21 @@ func (m *lyricsModel) MoveCursor(int, int)               {}
 func (m *lyricsModel) SetCursor(int, int)                {}
 
 func (w *WidgetLyrics) SetView(view views.View) {
-	w.Lock()
-	defer w.Unlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	w.view = view
 	w.cellView.SetView(view)
 }
 
 func (w *WidgetLyrics) Draw() {
-	w.Lock()
-	defer w.Unlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	w.cellView.Draw()
 }
 
 func (w *WidgetLyrics) Resize() {
-	w.Lock()
-	defer w.Unlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	w.cellView.Resize()
 }
 
@@ -264,7 +280,7 @@ func (w *WidgetLyrics) HandleEvent(ev tcell.Event) bool {
 }
 
 func (w *WidgetLyrics) Size() (int, int) {
-	w.Lock()
-	defer w.Unlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	return w.cellView.Size()
 }

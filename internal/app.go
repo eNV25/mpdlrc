@@ -123,7 +123,8 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 		}
 	case *tcell.EventResize:
 		// guaranteed to run at program start
-		app.Screen.Fill(' ', tcell.StyleDefault)
+		var styleDefault tcell.Style
+		app.Screen.Fill(' ', styleDefault)
 		app.Screen.Sync()
 		app.Resize()
 		app.Update()
