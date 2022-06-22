@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -20,7 +21,7 @@ type Client interface {
 type Watcher interface {
 	Start() error
 	Stop() error
-	PostEvents(ch chan<- tcell.Event, quit <-chan struct{})
+	PostEvents(ctx context.Context, ch chan<- tcell.Event)
 }
 
 type Song interface {
@@ -40,8 +41,8 @@ type Status interface {
 
 type Widget interface {
 	Draw()
-	Resize()
-	HandleEvent(ev tcell.Event) bool
+	View() views.View
 	SetView(view views.View)
 	Size() (x int, y int)
+	Resize()
 }

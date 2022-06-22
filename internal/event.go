@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -45,16 +46,16 @@ func NewEventPlayer() tcell.Event {
 	return &EventPlayer{event{when: time.Now()}}
 }
 
-func sendNewEventEvery(ch chan<- tcell.Event, newEvent func() tcell.Event, d time.Duration, quit <-chan struct{}) {
+func sendNewEventEvery(ctx context.Context, ch chan<- tcell.Event, newEvent func() tcell.Event, d time.Duration) {
 	ticker := time.NewTicker(d)
 	defer ticker.Stop()
 	for {
 		select {
-		case <-quit:
+		case <-ctx.Done():
 			return
 		case <-ticker.C:
 			select {
-			case <-quit:
+			case <-ctx.Done():
 				return
 			case ch <- newEvent():
 			}

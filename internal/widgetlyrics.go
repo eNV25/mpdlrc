@@ -1,8 +1,8 @@
 package internal
 
 import (
+	"context"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -10,135 +10,101 @@ import (
 	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 
-	"github.com/env25/mpdlrc/internal/syncu"
+	"github.com/env25/mpdlrc/internal/timerpool"
 )
 
 var _ Widget = &WidgetLyrics{}
 
 // LyricsWidget is a Widget implementation.
 type WidgetLyrics struct {
-	mu sync.Mutex
+	widgetCommon
 
-	toCall struct {
-		syncu.Once
-		*time.Timer
-	}
-
-	view     views.View
 	cellView *views.CellView
 
-	widgetLyricsData
-
-	quit     <-chan struct{}
-	postFunc func(fn func())
+	//*WidgetLyricsData /* not needed */
 }
 
-type widgetLyricsData struct {
-	times   []time.Duration
-	lines   []string
-	elapsed time.Duration
+type WidgetLyricsData struct {
+	Playing bool
+	Times   []time.Duration
+	Lines   []string
+	Elapsed time.Duration
 	index   int
 	total   int
 }
 
 // NewWidgetLyrics allocates new LyricsWidget.
-func NewWidgetLyrics(postFunc func(fn func()), quit <-chan struct{}) *WidgetLyrics {
-	w := &WidgetLyrics{
-		postFunc: postFunc,
-		quit:     quit,
-	}
+func NewWidgetLyrics(events chan<- tcell.Event) *WidgetLyrics {
+	w := &WidgetLyrics{}
+	w.events = events
 	w.cellView = views.NewCellView()
-	w.cellView.Init()
 	return w
 }
 
-func (w *WidgetLyrics) Cancel() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.toCall.Timer != nil {
-		w.toCall.Stop()
-	}
-}
-
-func (w *WidgetLyrics) Update(
-	playing bool,
-	id string,
-	elapsed time.Duration,
-	times []time.Duration,
-	lines []string,
-) {
+func (w *WidgetLyrics) Update(ctx context.Context) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.elapsed = elapsed
-	w.times = times
-	w.lines = lines
+	// panic if not exist
+	d := ctx.Value((*WidgetLyricsData)(nil)).(*WidgetLyricsData)
 
-	w.total = len(w.lines)
+	// w.WidgetLyricsData = d /* not needed */
+
+	d.total = len(d.Lines)
 
 	// This index is the first line after the one to be displayed.
-	w.index = sort.Search(w.total, func(i int) bool { return w.times[i] > w.elapsed })
+	d.index = sort.Search(d.total, func(i int) bool { return d.Times[i] > d.Elapsed })
 
-	if w.index < 0 || w.index > w.total {
+	if d.index < 0 || d.index > d.total {
 		// This path is chosen when index is out of bounds for whatever reason.
 		// Will display nothing. Will not start AfterFunc chain.
 
-		w.index = 0
-		w.total = 1
-		w.lines = make([]string, 1)
-		playing = false
+		d.index = 0
+		d.total = 1
+		d.Lines = []string{}
+		d.Playing = false
 	} else {
 		// select previous line
-		w.index--
+		d.index--
 	}
 
-	select {
-	case <-w.quit:
-		return
-	default:
-	}
-
-	if playing {
-		go func() {
-			w.mu.Lock()
-			defer w.mu.Unlock()
-			w.update()
-		}()
-	} else {
-		go func() {
-			w.mu.Lock()
-			defer w.mu.Unlock()
-			w.updateModel()
-		}()
-	}
+	w.update(ctx, d)
 }
 
-func (w *WidgetLyrics) update() {
-	select {
-	case <-w.quit:
-		return
-	default:
-		if w.index >= (w.total - 1) {
+func (w *WidgetLyrics) update(ctx context.Context, d *WidgetLyricsData) {
+	w.updateModel(d)
+
+	go func() {
+		select {
+		case <-ctx.Done():
 			return
+		case w.events <- NewEventFunction(w.Draw):
 		}
+	}()
+
+	if !d.Playing || d.index+1 >= d.total {
+		return
 	}
 
-	w.updateModel()
+	timer := timerpool.Get(d.Times[d.index+1] - d.Elapsed)
+	go func() {
+		select {
+		case <-ctx.Done():
+			timerpool.Put(timer, false)
+			return
+		case <-timer.C:
+			timerpool.Put(timer, true)
+		}
 
-	if !w.toCall.Once.Do(func() {
-		w.toCall.Timer = time.AfterFunc((w.times[w.index+1] - w.elapsed), func() {
-			w.mu.Lock()
-			defer w.mu.Unlock()
-			w.index += 1
-			w.elapsed = w.times[w.index]
-			w.update()
-		})
-	}) {
-		w.toCall.Reset((w.times[w.index+1] - w.elapsed))
-	}
+		w.mu.Lock()
+		defer w.mu.Unlock()
+		d.index += 1
+		d.Elapsed = d.Times[d.index]
+		w.update(ctx, d)
+	}()
 }
 
-func (w *WidgetLyrics) updateModel() {
+func (w *WidgetLyrics) updateModel(d *WidgetLyricsData) {
 	m := &lyricsModel{}
 
 	x, y := w.view.Size()
@@ -149,11 +115,11 @@ func (w *WidgetLyrics) updateModel() {
 	m.height = y + 1
 
 	// nothing is highlighted when index is -1 like it should
-	i1 := w.index - mid
-	i2 := w.index + mid + 1
+	i1 := d.index - mid
+	i2 := d.index + mid + 1
 
 	var (
-		styleDefault tcell.Style
+		styleDefault = tcell.Style{}
 		styleHl      = styleDefault.Bold(true).Reverse(true)
 	)
 
@@ -169,8 +135,10 @@ func (w *WidgetLyrics) updateModel() {
 		row++
 	}
 
-	for i := i1; i < i2 && i < len(w.lines); i++ {
-		width := runewidth.StringWidth(w.lines[i])
+	for i := i1; i < i2 && i < len(d.Lines); i++ {
+		// TODO: StringWidth uses uniseg.Graphemes under the hood.
+		//       Can we do this without running uniseg twice?
+		width := runewidth.StringWidth(d.Lines[i])
 		off := (x - width) / 2
 		if off < 0 {
 			off = 0
@@ -194,12 +162,15 @@ func (w *WidgetLyrics) updateModel() {
 			cell += 1
 		}
 
-		grphms := uniseg.NewGraphemes(w.lines[i])
+		grphms := uniseg.NewGraphemes(d.Lines[i])
 
 		for grphms.Next() {
 			runes := grphms.Runes()
 
+			// StringWidth uses uniseg.Graphemes under the hood.
+			// We copy its code to avoid running uniseg again.
 			// wd := runewidth.StringWidth(grphms.Str())
+
 			wd := 1
 			for _, r := range runes {
 				wd = runewidth.RuneWidth(r)
@@ -229,7 +200,6 @@ func (w *WidgetLyrics) updateModel() {
 	}
 
 	w.cellView.SetModel(m)
-	go w.postFunc(w.Draw)
 }
 
 var _ views.CellModel = &lyricsModel{}
@@ -273,10 +243,6 @@ func (w *WidgetLyrics) Resize() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.cellView.Resize()
-}
-
-func (w *WidgetLyrics) HandleEvent(ev tcell.Event) bool {
-	return false
 }
 
 func (w *WidgetLyrics) Size() (int, int) {

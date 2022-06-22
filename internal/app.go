@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,92 +11,92 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/gdamore/tcell/v2/views"
+	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/lrc"
 )
 
-// Application struct. It implemets views.Widget so that it can be used as the root Widget.
-// Call (*Application).Run to run.
+// Application struct. Call (*Application).Run to run.
 type Application struct {
 	tcell.Screen
 
-	cfg *config.Config
+	bctx   context.Context
+	cancel func()
+	quit   func()
+	events chan tcell.Event
 
+	cfg     *config.Config
 	client  ClientType
 	watcher WatcherType
-	song    SongType
-	status  StatusType
-	times   []time.Duration
-	lines   []string
-	id      string
-	playing bool
 
-	focused   Widget
-	lyricsv   *views.ViewPort
-	lyricsw   *WidgetLyrics
-	progressv *views.ViewPort
-	progressw *WidgetProgress
+	wlyrics   *WidgetLyrics
+	wprogress *WidgetProgress
 
-	events chan tcell.Event
-	quit   chan struct{}
+	id    string
+	times []time.Duration
+	lines []string
 }
 
 // NewApplication allocates new Application from cfg.
 func NewApplication(cfg *config.Config) *Application {
 	app := &Application{
 		cfg:    cfg,
-		quit:   make(chan struct{}),
 		events: make(chan tcell.Event),
 	}
 
 	app.client = NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 	app.watcher = NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 
-	app.lyricsw = NewWidgetLyrics(app.postFunc, app.quit)
-	app.progressw = NewWidgetProgress(app.postFunc, app.quit)
-	app.focused = app.lyricsw
+	app.wlyrics = NewWidgetLyrics(app.events)
+	app.wprogress = NewWidgetProgress(app.events)
 
+	app.bctx, app.quit = context.WithCancel(context.Background())
+	_, app.cancel = context.WithCancel(app.bctx)
 	return app
 }
 
 // Update subwidgets after querying information from client.
-func (app *Application) Update() {
+func (app *Application) Update(ctx context.Context) {
 	song, status := app.client.NowPlaying(), app.client.Status()
-	if song != nil && status != nil {
-		app.song, app.status = song, status
-	} else {
+	if song == nil || status == nil {
 		return
 	}
 
-	app.progressw.Cancel()
-	app.lyricsw.Cancel()
+	var (
+		playing  bool
+		elapsed  = status.Elapsed()
+		duration = status.Duration()
+	)
 
-	switch app.status.State() {
+	// cancel previous context
+	app.cancel()
+
+	ctx, app.cancel = context.WithCancel(ctx)
+
+	switch status.State() {
 	case StatePlay:
-		app.playing = true
-	case StatePause:
-		app.playing = false
+		playing = true
 	default:
-		// nothing to do
-		return
+		playing = false
 	}
 
-	if id := app.song.ID(); id != app.id {
+	if id := song.ID(); id != app.id {
 		app.id = id
-		app.times, app.lines = app.lyrics(app.song)
+		app.times, app.lines = app.lyrics(song)
 	}
 
-	app.progressw.Update(app.playing, app.id, app.status.Elapsed(), app.status.Duration())
-	app.lyricsw.Update(app.playing, app.id, app.status.Elapsed(), app.times, app.lines)
-}
-
-// Resize is run after a resize event.
-func (app *Application) Resize() {
-	app.progressv.Resize(0, 0, -1, 1)
-	app.lyricsv.Resize(0, 1, -1, -1)
-	app.progressw.Resize()
-	app.lyricsw.Resize()
+	go app.wprogress.Update(context.WithValue(ctx, (*WidgetProgressData)(nil), &WidgetProgressData{
+		Playing:  playing,
+		Elapsed:  elapsed,
+		Duration: duration,
+	}))
+	go app.wlyrics.Update(context.WithValue(ctx, (*WidgetLyricsData)(nil), &WidgetLyricsData{
+		Playing: playing,
+		Elapsed: elapsed,
+		Times:   app.times,
+		Lines:   app.lines,
+	}))
 }
 
 // HandleEvent handles dem events.
@@ -123,14 +124,10 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 		}
 	case *tcell.EventResize:
 		// guaranteed to run at program start
-		var styleDefault tcell.Style
-		app.Screen.Fill(' ', styleDefault)
-		app.Screen.Sync()
 		app.Resize()
-		app.Update()
 		return true
 	case *EventPlayer:
-		app.Update()
+		app.Update(app.bctx)
 		return true
 	case *EventPing:
 		app.client.Ping()
@@ -145,33 +142,24 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 		ev.Func()
 		return true
 	}
-	return app.focused.HandleEvent(ev)
+	return false
 }
 
-// postFunc runs function fn in the event loop. uses an unbuffered channel.
-func (app *Application) postFunc(fn func()) {
-	select {
-	case <-app.quit:
-		// no-op
-	case app.events <- NewEventFunction(fn):
-	}
-}
-
-// SetView updates the views of subwidgets.
-func (app *Application) SetView(view views.View) {
-	if app.lyricsv == nil || app.progressv == nil {
-		// init
-		app.progressv = views.NewViewPort(view, 0, 0, 0, 0)
-		app.progressw.SetView(app.progressv)
-		app.lyricsv = views.NewViewPort(view, 0, 0, 0, 0)
-		app.lyricsw.SetView(app.lyricsv)
-	}
+// Resize is run after a resize event.
+func (app *Application) Resize() {
+	app.Screen.Fill(' ', tcell.Style{})
+	app.Screen.Sync()
+	app.wprogress.View().Resize(0, 0, -1, 1)
+	app.wlyrics.View().Resize(0, 1, -1, -1)
+	app.wprogress.Resize()
+	app.wlyrics.Resize()
+	app.Update(app.bctx)
 }
 
 // lyrics fetches lyrics using information from song.
 func (app *Application) lyrics(song SongType) ([]time.Duration, []string) {
 	if r, err := os.Open(
-		filepath.Join(app.cfg.LyricsDir, app.song.LRCFile()),
+		filepath.Join(app.cfg.LyricsDir, song.LRCFile()),
 	); err != nil {
 		return make([]time.Duration, 1), make([]string, 1) // blank screen
 	} else {
@@ -185,46 +173,50 @@ func (app *Application) lyrics(song SongType) ([]time.Duration, []string) {
 
 // Quit the application.
 func (app *Application) Quit() {
-	close(app.quit)
+	app.quit()
 }
 
 // Run the application.
 func (app *Application) Run() (err error) {
+	defer func() {
+	}()
+
 	app.Screen, err = tcell.NewScreen()
 	if err != nil {
-		goto quit
+		return
 	}
 
 	err = app.Screen.Init()
 	if err != nil {
-		goto quit
+		return
 	}
 	defer app.Screen.Fini()
 
 	err = app.client.Start()
 	if err != nil {
-		goto quit
+		return
 	}
-	defer app.client.Stop()
+	defer func() { err = multierr.Append(err, app.client.Stop()) }()
 
 	err = app.watcher.Start()
 	if err != nil {
-		goto quit
+		return
 	}
-	defer app.watcher.Stop()
+	defer func() { err = multierr.Append(err, app.watcher.Stop()) }()
 
-	go app.Screen.ChannelEvents(app.events, app.quit)
-	go app.watcher.PostEvents(app.events, app.quit)
-	go sendNewEventEvery(app.events, NewEventPing, 5*time.Second, app.quit)
+	defer app.Quit()
 
-	app.SetView(app.Screen)
+	// Screen.ChannelEvents closes events
+	go app.Screen.ChannelEvents(app.events, app.bctx.Done())
+	go app.watcher.PostEvents(app.bctx, app.events)
+	go sendNewEventEvery(app.bctx, app.events, NewEventPing, 5*time.Second)
+
+	app.wlyrics.SetView(views.NewViewPort(app.Screen, 0, 0, 0, 0))
+	app.wprogress.SetView(views.NewViewPort(app.Screen, 0, 0, 0, 0))
+
 	for ev := range app.events {
 		app.HandleEvent(ev)
 		app.Show()
 	}
-	return
-
-quit:
-	app.Quit()
 	return
 }
