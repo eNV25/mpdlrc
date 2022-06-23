@@ -47,6 +47,7 @@ func (w *WidgetLyrics) Update(ctx context.Context) {
 
 	// panic if not exist
 	d := ctx.Value((*WidgetLyricsData)(nil)).(*WidgetLyricsData)
+	_ = *d
 
 	// w.WidgetLyricsData = d /* not needed */
 

@@ -39,6 +39,7 @@ func (w *WidgetProgress) Update(ctx context.Context) {
 
 	// panic if not exist
 	d := ctx.Value((*WidgetProgressData)(nil)).(*WidgetProgressData)
+	_ = *d
 	w.WidgetProgressData = d
 
 	d.Duration = d.Duration / time.Duration(w.totalX)
