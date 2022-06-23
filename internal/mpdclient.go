@@ -1,8 +1,10 @@
 package internal
 
 import (
-	"errors"
+	"context"
+	"os"
 	"path"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -10,8 +12,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"go.uber.org/atomic"
 )
-
-var ErrMPDClientAlreadyClosed = errors.New("MPDClient: already closed")
 
 type MPDClient struct {
 	client              *mpd.Client
@@ -34,6 +34,7 @@ func NewMPDClient(net, addr, password string) *MPDClient {
 
 func (c *MPDClient) Start() (err error) {
 	c.client, err = mpd.DialAuthenticated(c.net, c.addr, c.password)
+	runtime.SetFinalizer(c, func(c *MPDClient) { _ = c.Stop() })
 	return
 }
 
@@ -60,7 +61,7 @@ func (c *MPDClient) Ping() {
 
 func (c *MPDClient) Stop() error {
 	if c.closed.Swap(true) {
-		return ErrMPDClientAlreadyClosed
+		return os.ErrClosed
 	}
 	return c.client.Close()
 }
@@ -100,16 +101,17 @@ func NewMPDWatcher(net, addr, password string) *MPDWatcher {
 
 func (w *MPDWatcher) Start() (err error) {
 	w.watcher, err = mpd.NewWatcher(w.net, w.addr, w.password, "player")
+	runtime.SetFinalizer(w, func(w *MPDWatcher) { _ = w.Stop() })
 	return
 }
 
 func (w *MPDWatcher) Stop() error { return w.watcher.Close() }
 
-func (w *MPDWatcher) PostEvents(ch chan<- tcell.Event, quit <-chan struct{}) {
+func (w *MPDWatcher) PostEvents(ctx context.Context, ch chan<- tcell.Event) {
 	var newEvent (func() tcell.Event)
 	for {
 		select {
-		case <-quit:
+		case <-ctx.Done():
 			return
 		case mpdev := <-w.watcher.Event:
 			switch mpdev {
@@ -118,7 +120,7 @@ func (w *MPDWatcher) PostEvents(ch chan<- tcell.Event, quit <-chan struct{}) {
 			}
 			if newEvent != nil {
 				select {
-				case <-quit:
+				case <-ctx.Done():
 					return
 				case ch <- newEvent():
 				}

@@ -1,113 +1,89 @@
 package internal
 
 import (
+	"context"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/gdamore/tcell/v2/views"
 
-	"github.com/env25/mpdlrc/internal/syncu"
+	"github.com/env25/mpdlrc/internal/timerpool"
 )
 
+var _ Widget = &WidgetProgress{}
+
 type WidgetProgress struct {
-	mu sync.Mutex
+	widgetCommon
 
-	toCall struct {
-		syncu.Once
-		*time.Timer
-	}
-
-	view views.View
-
-	widgetProgressData
-
-	quit     <-chan struct{}
-	postFunc func(fn func())
+	totalX int
+	*WidgetProgressData
 }
 
-type widgetProgressData struct {
-	duration time.Duration
+type WidgetProgressData struct {
+	Playing  bool
+	Elapsed  time.Duration
+	Duration time.Duration
 	elapsedX int
-	totalX   int
 	offsetY  int
 }
 
-func NewWidgetProgress(postFunc func(fn func()), quit <-chan struct{}) *WidgetProgress {
-	return &WidgetProgress{
-		postFunc: postFunc,
-		quit:     quit,
-	}
+func NewWidgetProgress(events chan<- tcell.Event) *WidgetProgress {
+	ret := &WidgetProgress{}
+	ret.events = events
+	return ret
 }
 
-func (w *WidgetProgress) Cancel() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.toCall.Timer != nil {
-		w.toCall.Stop()
-	}
-}
-
-func (w *WidgetProgress) Update(
-	playing bool,
-	id string,
-	elapsed time.Duration,
-	duration time.Duration,
-) {
+func (w *WidgetProgress) Update(ctx context.Context) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.duration = duration / time.Duration(w.totalX)
-	w.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * w.duration) >= elapsed })
+	// panic if not exist
+	d := ctx.Value((*WidgetProgressData)(nil)).(*WidgetProgressData)
+	w.WidgetProgressData = d
 
-	select {
-	case <-w.quit:
-		return
-	default:
-		if w.elapsedX >= w.totalX {
-			return
-		}
-	}
+	d.Duration = d.Duration / time.Duration(w.totalX)
+	d.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * d.Duration) >= d.Elapsed })
 
-	if playing {
-		go func() {
-			w.mu.Lock()
-			defer w.mu.Unlock()
-			w.update()
-		}()
-	} else {
-		go w.postFunc(w.Draw)
-	}
+	w.update(ctx, d)
 }
 
-func (w *WidgetProgress) update() {
-	select {
-	case <-w.quit:
-		return
-	default:
-		if w.elapsedX >= w.totalX {
+func (w *WidgetProgress) update(ctx context.Context, d *WidgetProgressData) {
+	go func() {
+		select {
+		case <-ctx.Done():
 			return
+		case w.events <- NewEventFunction(w.Draw):
 		}
+	}()
+
+	if !d.Playing || d.elapsedX+1 >= w.totalX {
+		return
 	}
 
-	go w.postFunc(w.Draw)
+	timer := timerpool.Get(d.Duration)
+	go func() {
+		select {
+		case <-ctx.Done():
+			timerpool.Put(timer, false)
+			return
+		case <-timer.C:
+			timerpool.Put(timer, true)
+		}
 
-	if !w.toCall.Once.Do(func() {
-		w.toCall.Timer = time.AfterFunc(w.duration, func() {
-			w.mu.Lock()
-			defer w.mu.Unlock()
-			w.elapsedX += 1
-			w.update()
-		})
-	}) {
-		w.toCall.Reset(w.duration)
-	}
+		w.mu.Lock()
+		defer w.mu.Unlock()
+		d.elapsedX += 1
+		w.update(ctx, d)
+	}()
 }
 
 func (w *WidgetProgress) Draw() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if w.WidgetProgressData == nil {
+		return
+	}
 
 	const (
 		rune0 rune = '='
@@ -116,7 +92,7 @@ func (w *WidgetProgress) Draw() {
 	)
 
 	var (
-		styleDefault tcell.Style
+		styleDefault = tcell.Style{}
 		style0       = styleDefault.Bold(true)
 		style1       = style0
 		style2       = styleDefault.Dim(true)
@@ -132,12 +108,6 @@ func (w *WidgetProgress) Draw() {
 	}
 }
 
-func (w *WidgetProgress) SetView(view views.View) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.view = view
-}
-
 func (w *WidgetProgress) Resize() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -150,5 +120,3 @@ func (w *WidgetProgress) Size() (int, int) {
 	x, _ := w.view.Size()
 	return x, 1
 }
-
-func (*WidgetProgress) HandleEvent(tcell.Event) bool { return false }

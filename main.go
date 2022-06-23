@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strings"
@@ -95,11 +94,7 @@ func main() {
 
 	defer fmt.Fprint(os.Stderr, &logBuilder)
 
-	if config.Debug {
-		log.SetOutput(&logBuilder)
-	} else {
-		log.SetOutput(io.Discard)
-	}
+	log.SetOutput(&logBuilder)
 
 	if flag_dumpcfg {
 		_ = toml.NewEncoder(&logBuilder).Encode(cfg)
@@ -107,13 +102,10 @@ func main() {
 		return
 	}
 
-	if err := internal.NewApplication(cfg).Run(); err != nil {
+	err := internal.NewApplication(cfg).Run()
+	if err != nil {
 		log.Println(err)
-		exitCode = 1
-		return
 	}
-
-	exitCode = 0
 }
 
 type fakeValue pflag.Flag
