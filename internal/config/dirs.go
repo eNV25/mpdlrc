@@ -42,7 +42,7 @@ func ExpandTilde(str string) string {
 	switch {
 	case strings.HasPrefix(str, "~"):
 		// ~ or ~/path or ~user/path
-		u, p, _ := stringsu.Cut(str[1:], string(os.PathSeparator))
+		u, p, _ := stringsu.Cut(str[1:], string(filepath.Separator))
 		return filepath.Join(HomeDir(u), p) // calls filepath.Clean
 	default:
 		// path or /path
