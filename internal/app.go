@@ -56,8 +56,8 @@ func NewApplication(cfg *config.Config) *Application {
 	return app
 }
 
-// Update subwidgets after querying information from client.
-func (app *Application) Update(ctx context.Context) {
+// update subwidgets after querying information from client.
+func (app *Application) update(ev tcell.Event) {
 	song, status := app.client.NowPlaying(), app.client.Status()
 	if song == nil || status == nil {
 		return
@@ -72,7 +72,9 @@ func (app *Application) Update(ctx context.Context) {
 	// cancel previous context
 	app.cancel()
 
+	ctx := app.bctx
 	ctx, app.cancel = context.WithCancel(ctx)
+	ctx = context.WithValue(ctx, (*time.Time)(nil), ev.When())
 
 	switch status.State() {
 	case StatePlay:
@@ -99,8 +101,8 @@ func (app *Application) Update(ctx context.Context) {
 	}))
 }
 
-// HandleEvent handles dem events.
-func (app *Application) HandleEvent(ev tcell.Event) bool {
+// handleEvent handles dem events.
+func (app *Application) handleEvent(ev tcell.Event) bool {
 	if config.Debug {
 		log.Printf("event: %T", ev)
 	}
@@ -108,27 +110,22 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 	case *tcell.EventKey:
 		switch ev.Key() {
 		case tcell.KeyCtrlL:
-			// fake resize event
-			return app.HandleEvent(tcell.NewEventResize(app.Size()))
+			goto resize
 		case tcell.KeyCtrlC, tcell.KeyEscape:
-			app.Quit()
-			return true
+			goto quit
 		case tcell.KeyRune:
 			switch ev.Rune() {
 			case 'q':
-				app.Quit()
-				return true
+				goto quit
 			case ' ':
 				return true
 			}
 		}
 	case *tcell.EventResize:
 		// guaranteed to run at program start
-		app.Resize()
-		return true
+		goto resize
 	case *EventPlayer:
-		app.Update(app.bctx)
-		return true
+		goto update
 	case *EventPing:
 		app.client.Ping()
 		return true
@@ -141,8 +138,18 @@ func (app *Application) HandleEvent(ev tcell.Event) bool {
 		}
 		ev.Func()
 		return true
+	default:
+		return false
 	}
-	return false
+resize:
+	app.Resize()
+	goto update
+update:
+	app.update(ev)
+	return true
+quit:
+	app.Quit()
+	return true
 }
 
 // Resize is run after a resize event.
@@ -153,7 +160,6 @@ func (app *Application) Resize() {
 	app.wlyrics.View().Resize(0, 1, -1, -1)
 	app.wprogress.Resize()
 	app.wlyrics.Resize()
-	app.Update(app.bctx)
 }
 
 // lyrics fetches lyrics using information from song.
@@ -178,9 +184,6 @@ func (app *Application) Quit() {
 
 // Run the application.
 func (app *Application) Run() (err error) {
-	defer func() {
-	}()
-
 	app.Screen, err = tcell.NewScreen()
 	if err != nil {
 		return
@@ -215,7 +218,7 @@ func (app *Application) Run() (err error) {
 	app.wprogress.SetView(views.NewViewPort(app.Screen, 0, 0, 0, 0))
 
 	for ev := range app.events {
-		app.HandleEvent(ev)
+		app.handleEvent(ev)
 		app.Show()
 	}
 	return

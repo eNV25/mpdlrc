@@ -49,6 +49,9 @@ func (w *WidgetLyrics) Update(ctx context.Context) {
 	d := ctx.Value((*WidgetLyricsData)(nil)).(*WidgetLyricsData)
 	_ = *d
 
+	t := ctx.Value((*time.Time)(nil)).(time.Time)
+	d.Elapsed += time.Since(t)
+
 	// w.WidgetLyricsData = d /* not needed */
 
 	d.total = len(d.Lines)
@@ -89,18 +92,19 @@ func (w *WidgetLyrics) update(ctx context.Context, d *WidgetLyricsData) {
 
 	timer := timerpool.Get(d.Times[d.index+1] - d.Elapsed)
 	go func() {
+		var t time.Time
 		select {
 		case <-ctx.Done():
 			timerpool.Put(timer, false)
 			return
-		case <-timer.C:
+		case t = <-timer.C:
 			timerpool.Put(timer, true)
 		}
 
 		w.mu.Lock()
 		defer w.mu.Unlock()
 		d.index += 1
-		d.Elapsed = d.Times[d.index]
+		d.Elapsed = d.Times[d.index] + time.Since(t)
 		w.update(ctx, d)
 	}()
 }

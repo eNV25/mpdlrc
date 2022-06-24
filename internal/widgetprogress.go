@@ -42,6 +42,9 @@ func (w *WidgetProgress) Update(ctx context.Context) {
 	_ = *d
 	w.WidgetProgressData = d
 
+	t := ctx.Value((*time.Time)(nil)).(time.Time)
+	d.Elapsed += time.Since(t)
+
 	d.Duration = d.Duration / time.Duration(w.totalX)
 	d.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * d.Duration) >= d.Elapsed })
 
