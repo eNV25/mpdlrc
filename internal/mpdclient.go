@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 	"os"
-	"path"
 	"runtime"
 	"strconv"
 	"time"
@@ -134,56 +133,26 @@ type MPDSong map[string]string
 
 var _ Song = MPDSong{}
 
-func (s MPDSong) ID() string {
-	return s["Id"]
-}
-
-func (s MPDSong) Title() string {
-	return s["Title"]
-}
-
-func (s MPDSong) Artist() string {
-	return s["Artist"]
-}
-
-func (s MPDSong) Album() string {
-	return s["Album"]
-}
-
-func (s MPDSong) File() string {
-	return s["file"]
-}
-
-func (s MPDSong) LRCFile() string {
-	file := s.File()
-	return file[:(len(file)-len(path.Ext(file)))] + ".lrc"
-}
+func (s MPDSong) ID() string     { return s["Id"] }
+func (s MPDSong) Title() string  { return s["Title"] }
+func (s MPDSong) Artist() string { return s["Artist"] }
+func (s MPDSong) Album() string  { return s["Album"] }
+func (s MPDSong) Date() string   { return s["Date"] }
+func (s MPDSong) File() string   { return s["file"] }
 
 type MPDStatus map[string]string
 
 var _ Status = MPDStatus{}
 
-func (s MPDStatus) Duration() time.Duration {
-	return secondStringToDuration(s["duration"])
-}
+func (s MPDStatus) State() string           { return s["state"] }
+func (s MPDStatus) Duration() time.Duration { return s.timeDuration("duration") }
+func (s MPDStatus) Elapsed() time.Duration  { return s.timeDuration("elapsed") }
+func (s MPDStatus) Repeat() bool            { return s["repeat"] != "0" }
+func (s MPDStatus) Random() bool            { return s["random"] != "0" }
+func (s MPDStatus) Single() bool            { return s["single"] != "0" }
+func (s MPDStatus) Consume() bool           { return s["consume"] != "0" }
 
-func (s MPDStatus) Elapsed() time.Duration {
-	return secondStringToDuration(s["elapsed"])
-}
-
-func secondStringToDuration(str string) time.Duration {
-	parsed, _ := strconv.ParseFloat(str, 64)
+func (s MPDStatus) timeDuration(key string) time.Duration {
+	parsed, _ := strconv.ParseFloat(s[key], 64)
 	return time.Duration(parsed * float64(time.Second))
-}
-
-func (s MPDStatus) State() State {
-	switch s["state"] {
-	case "play":
-		return StatePlay
-	case "stop":
-		return StateStop
-	case "pause":
-		return StatePause
-	}
-	return 0
 }

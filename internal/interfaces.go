@@ -29,14 +29,18 @@ type Song interface {
 	Title() string
 	Artist() string
 	Album() string
+	Date() string
 	File() string
-	LRCFile() string
 }
 
 type Status interface {
 	Duration() time.Duration
 	Elapsed() time.Duration
-	State() State
+	State() string
+	Repeat() bool
+	Random() bool
+	Single() bool
+	Consume() bool
 }
 
 type Widget interface {

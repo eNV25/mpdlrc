@@ -14,6 +14,8 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal/config"
+	"github.com/env25/mpdlrc/internal/filepathu"
+	"github.com/env25/mpdlrc/internal/pathu"
 	"github.com/env25/mpdlrc/lrc"
 )
 
@@ -77,7 +79,7 @@ func (app *Application) update(ev tcell.Event) {
 	ctx = context.WithValue(ctx, (*time.Time)(nil), ev.When())
 
 	switch status.State() {
-	case StatePlay:
+	case "play":
 		playing = true
 	default:
 		playing = false
@@ -164,9 +166,8 @@ func (app *Application) Resize() {
 
 // lyrics fetches lyrics using information from song.
 func (app *Application) lyrics(song SongType) ([]time.Duration, []string) {
-	if r, err := os.Open(
-		filepath.Join(app.cfg.LyricsDir, song.LRCFile()),
-	); err != nil {
+	p := filepath.Join(app.cfg.LyricsDir, filepathu.FromSlash(pathu.TrimExt(song.File())+".lrc"))
+	if r, err := os.Open(p); err != nil {
 		return make([]time.Duration, 1), make([]string, 1) // blank screen
 	} else {
 		if times, lines, err := lrc.ParseReader(r); err != nil {
