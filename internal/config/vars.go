@@ -7,6 +7,6 @@ import (
 
 func ConfigFiles() []string {
 	return []string{
-		filepath.Join(ConfigDir(), "mpdlrc"+string(os.PathSeparator)+"config.toml"),
+		filepath.Join(ConfigDir(""), "mpdlrc"+string(os.PathSeparator)+"config.toml"),
 	}
 }

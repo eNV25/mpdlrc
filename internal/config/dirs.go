@@ -9,9 +9,9 @@ import (
 	"github.com/env25/mpdlrc/internal/stringsu"
 )
 
-func ConfigDir() string {
+func ConfigDir(usr string) string {
 	if c, ok := os.LookupEnv("XDG_CONFIG_HOME"); !ok {
-		return filepath.Join(HomeDir(""), ".config")
+		return filepath.Join(HomeDir(usr), ".config")
 	} else {
 		return c
 	}
