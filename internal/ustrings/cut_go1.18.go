@@ -1,6 +1,6 @@
-//go:build !go1.18
+//go:build go1.18
 
-package stringsu
+package ustrings
 
 import "strings"
 
@@ -9,8 +9,5 @@ import "strings"
 // The found result reports whether sep appears in s.
 // If sep does not appear in s, cut returns s, "", false.
 func Cut(s, sep string) (before, after string, found bool) {
-	if i := strings.Index(s, sep); i >= 0 {
-		return s[:i], s[i+len(sep):], true
-	}
-	return s, "", false
+	return strings.Cut(s, sep)
 }

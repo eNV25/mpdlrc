@@ -1,4 +1,4 @@
-package internal
+package client
 
 import (
 	"context"
@@ -10,13 +10,16 @@ import (
 	"github.com/fhs/gompd/v2/mpd"
 	"github.com/gdamore/tcell/v2"
 	"go.uber.org/atomic"
+
+	"github.com/env25/mpdlrc/internal/event"
+	"github.com/env25/mpdlrc/internal/events"
 )
 
 type MPDClient struct {
+	closed atomic.Bool
+
 	client              *mpd.Client
 	net, addr, password string
-
-	closed atomic.Bool
 }
 
 var _ Client = &MPDClient{}
@@ -37,54 +40,56 @@ func (c *MPDClient) Start() (err error) {
 	return
 }
 
-func (c *MPDClient) Pause() {
+func (c *MPDClient) Pause() error {
 	if c.closed.Load() {
-		return
+		return os.ErrClosed
 	}
-	_ = c.client.Pause(true)
+	return c.client.Pause(true)
 }
 
-func (c *MPDClient) Play() {
+func (c *MPDClient) Play() error {
 	if c.closed.Load() {
-		return
+		return os.ErrClosed
 	}
-	_ = c.client.Pause(false)
+	return c.client.Pause(false)
 }
 
-func (c *MPDClient) Ping() {
+func (c *MPDClient) Ping() error {
 	if c.closed.Load() {
-		return
+		return os.ErrClosed
 	}
-	_ = c.client.Ping()
+	return c.client.Ping()
 }
 
 func (c *MPDClient) Stop() error {
-	if c.closed.Swap(true) {
+	if !c.closed.CAS(false, true) {
 		return os.ErrClosed
 	}
 	return c.client.Close()
 }
 
-func (c *MPDClient) NowPlaying() SongType {
+func (c *MPDClient) NowPlaying() (Song, error) {
 	if c.closed.Load() {
-		return nil
+		return nil, os.ErrClosed
 	}
-	if attrs, err := c.client.CurrentSong(); err != nil || attrs == nil {
-		return nil
-	} else {
-		return MPDSong(attrs)
-	}
+	attrs, err := c.client.CurrentSong()
+	return MPDSong(attrs), err
 }
 
-func (c *MPDClient) Status() StatusType {
+func (c *MPDClient) Status() (Status, error) {
 	if c.closed.Load() {
-		return nil
+		return nil, os.ErrClosed
 	}
-	if attrs, err := c.client.Status(); err != nil || attrs == nil {
-		return nil
-	} else {
-		return MPDStatus(attrs)
+	attrs, err := c.client.Status()
+	return MPDStatus(attrs), err
+}
+
+func (c *MPDClient) MusicDir() (string, error) {
+	if c.closed.Load() {
+		return "", os.ErrClosed
 	}
+	attrs, err := c.client.Command("config").Attrs()
+	return attrs["music_directory"], err
 }
 
 type MPDWatcher struct {
@@ -106,7 +111,8 @@ func (w *MPDWatcher) Start() (err error) {
 
 func (w *MPDWatcher) Stop() error { return w.watcher.Close() }
 
-func (w *MPDWatcher) PostEvents(ctx context.Context, ch chan<- tcell.Event) {
+func (w *MPDWatcher) PostEvents(ctx context.Context) {
+	ch := events.FromContext(ctx)
 	var newEvent (func() tcell.Event)
 	for {
 		select {
@@ -115,7 +121,7 @@ func (w *MPDWatcher) PostEvents(ctx context.Context, ch chan<- tcell.Event) {
 		case mpdev := <-w.watcher.Event:
 			switch mpdev {
 			case "player":
-				newEvent = NewEventPlayer
+				newEvent = event.NewPlayer
 			}
 			if newEvent != nil {
 				select {
