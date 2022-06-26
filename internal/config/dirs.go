@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/env25/mpdlrc/internal/stringsu"
+	"github.com/env25/mpdlrc/internal/ustrings"
 )
 
 func ConfigDir(usr string) string {
@@ -17,35 +17,35 @@ func ConfigDir(usr string) string {
 	}
 }
 
-func HomeDir(usr string) string {
+func HomeDir(usr string) (h string) {
+	var u *user.User
+	var err error
 	if usr == "" {
-		h, err := os.UserHomeDir()
-		if err != nil {
-			u, errr := user.Current()
-			if errr != nil {
-				panic(err)
-			}
-			return u.HomeDir
+		h, err = os.UserHomeDir()
+		if err == nil {
+			return
 		}
-		return h
+		u, err = user.Current()
+	} else {
+		u, err = user.Lookup(usr)
 	}
-	u, err := user.Lookup(usr)
-	if err != nil {
-		// fallback
-		// return path.Dir("/home/current") + "/user"
-		return filepath.Join(filepath.Dir(HomeDir("")), usr)
+	if err == nil {
+		h = u.HomeDir
+		return
 	}
-	return u.HomeDir
+	return
 }
 
 func ExpandTilde(str string) string {
 	switch {
+	case str == "":
+		return ""
 	case strings.HasPrefix(str, "~"):
 		// ~ or ~/path or ~user/path
-		u, p, _ := stringsu.Cut(str[1:], string(filepath.Separator))
+		u, p, _ := ustrings.Cut(str[1:], string(filepath.Separator))
 		return filepath.Join(HomeDir(u), p) // calls filepath.Clean
 	default:
 		// path or /path
-		return str
+		return filepath.Clean(str)
 	}
 }

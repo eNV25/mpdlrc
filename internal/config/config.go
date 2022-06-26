@@ -2,10 +2,17 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pelletier/go-toml/v2"
+
+	"github.com/env25/mpdlrc/internal/client"
 )
+
+var _ fmt.Stringer = (*Config)(nil)
 
 type Config struct {
 	MusicDir  string
@@ -53,6 +60,25 @@ func DefaultConfig() (cfg *Config) {
 	return
 }
 
+func (cfg *Config) String() string {
+	var b strings.Builder
+	_ = toml.NewEncoder(&b).Encode(cfg)
+	return b.String()
+}
+
+func (cfg *Config) FromClient(client client.Client) {
+	if cfg.LyricsDir != "" {
+		return
+	}
+	musicDir, err := client.MusicDir()
+	if err != nil {
+		cfg.LyricsDir = cfg.MusicDir
+		return
+	}
+	cfg.MusicDir = musicDir
+	cfg.LyricsDir = musicDir
+}
+
 // Expand expands tilde ("~") and variables ("$VAR" or "${VAR}") in paths in Config.
 // Sets LyricsDir to MusicDir if empty.
 func (cfg *Config) Expand() {
@@ -60,10 +86,6 @@ func (cfg *Config) Expand() {
 	cfg.LyricsDir = ExpandTilde(os.ExpandEnv(cfg.LyricsDir))
 	if strings.Contains(cfg.MPD.Address, string(os.PathSeparator)) {
 		cfg.MPD.Address = ExpandTilde(os.ExpandEnv(cfg.MPD.Address))
-	}
-
-	if cfg.LyricsDir == "" && cfg.MusicDir != "" {
-		cfg.LyricsDir = cfg.MusicDir
 	}
 }
 

@@ -1,4 +1,4 @@
-package internal
+package widget
 
 import (
 	"context"
@@ -6,25 +6,27 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/gdamore/tcell/v2/views"
 	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 
+	"github.com/env25/mpdlrc/internal/client"
+	"github.com/env25/mpdlrc/internal/event"
+	"github.com/env25/mpdlrc/internal/events"
+	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/timerpool"
+	"github.com/env25/mpdlrc/internal/urunewidth"
 )
 
-var _ Widget = &WidgetLyrics{}
+var _ Widget = &Lyrics{}
 
 // LyricsWidget is a Widget implementation.
-type WidgetLyrics struct {
-	widgetCommon
-
-	cellView *views.CellView
+type Lyrics struct {
+	common
 
 	//*WidgetLyricsData /* not needed */
 }
 
-type WidgetLyricsData struct {
+type lyricsData struct {
 	Playing bool
 	Times   []time.Duration
 	Lines   []string
@@ -33,26 +35,27 @@ type WidgetLyricsData struct {
 	total   int
 }
 
-// NewWidgetLyrics allocates new LyricsWidget.
-func NewWidgetLyrics(events chan<- tcell.Event) *WidgetLyrics {
-	w := &WidgetLyrics{}
-	w.events = events
-	w.cellView = views.NewCellView()
+// NewLyrics allocates new LyricsWidget.
+func NewLyrics() *Lyrics {
+	w := &Lyrics{}
 	return w
 }
 
-func (w *WidgetLyrics) Update(ctx context.Context) {
+func (w *Lyrics) Update(ctx context.Context) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// panic if not exist
-	d := ctx.Value((*WidgetLyricsData)(nil)).(*WidgetLyricsData)
-	_ = *d
+	status := client.StatusFromContext(ctx)
+	lyrics := lyrics.FromContext(ctx)
 
-	t := ctx.Value((*time.Time)(nil)).(time.Time)
-	d.Elapsed += time.Since(t)
+	d := &lyricsData{
+		Playing: status.State() == "play",
+		Elapsed: status.Elapsed(),
+		Times:   lyrics.Times,
+		Lines:   lyrics.Lines,
+	}
 
-	// w.WidgetLyricsData = d /* not needed */
+	d.Elapsed += time.Since(event.FromContext(ctx).When())
 
 	d.total = len(d.Lines)
 
@@ -75,16 +78,10 @@ func (w *WidgetLyrics) Update(ctx context.Context) {
 	w.update(ctx, d)
 }
 
-func (w *WidgetLyrics) update(ctx context.Context, d *WidgetLyricsData) {
-	w.updateModel(d)
+func (w *Lyrics) update(ctx context.Context, d *lyricsData) {
+	m := w.model(d)
 
-	go func() {
-		select {
-		case <-ctx.Done():
-			return
-		case w.events <- NewEventFunction(w.Draw):
-		}
-	}()
+	go events.PostFunc(ctx, func() { w.draw(m) })
 
 	if !d.Playing || d.index+1 >= d.total {
 		return
@@ -109,10 +106,10 @@ func (w *WidgetLyrics) update(ctx context.Context, d *WidgetLyricsData) {
 	}()
 }
 
-func (w *WidgetLyrics) updateModel(d *WidgetLyricsData) {
+func (w *Lyrics) model(d *lyricsData) *lyricsModel {
 	m := &lyricsModel{}
 
-	x, y := w.view.Size()
+	x, y := w.Size()
 	mid := y / 2
 	midoff := 0
 
@@ -172,17 +169,7 @@ func (w *WidgetLyrics) updateModel(d *WidgetLyricsData) {
 		for grphms.Next() {
 			runes := grphms.Runes()
 
-			// StringWidth uses uniseg.Graphemes under the hood.
-			// We copy its code to avoid running uniseg again.
-			// wd := runewidth.StringWidth(grphms.Str())
-
-			wd := 1
-			for _, r := range runes {
-				wd = runewidth.RuneWidth(r)
-				if wd > 0 {
-					break // Our best guess at this point is to use the width of the first non-zero-width rune.
-				}
-			}
+			wd := urunewidth.GraphemeWidth(runes)
 
 			m.maincs[row][cell] = runes[0]
 			m.combcs[row][cell] = runes[1:]
@@ -204,10 +191,10 @@ func (w *WidgetLyrics) updateModel(d *WidgetLyricsData) {
 		m.styles[mid][cell] = styleHl
 	}
 
-	w.cellView.SetModel(m)
+	return m
 }
 
-var _ views.CellModel = &lyricsModel{}
+var _ cellModel = &lyricsModel{}
 
 type lyricsModel struct {
 	maincs [][]rune
@@ -226,32 +213,30 @@ func (m *lyricsModel) GetCell(x, y int) (rune, tcell.Style, []rune, int) {
 	}
 	return m.maincs[y][x], m.styles[y][x], m.combcs[y][x], m.widths[y][x]
 }
-func (m *lyricsModel) GetBounds() (int, int)             { return m.width, m.height }
-func (m *lyricsModel) GetCursor() (int, int, bool, bool) { return 0, 0, false, false }
-func (m *lyricsModel) MoveCursor(int, int)               {}
-func (m *lyricsModel) SetCursor(int, int)                {}
+func (m *lyricsModel) GetBounds() (int, int) { return m.width, m.height }
 
-func (w *WidgetLyrics) SetView(view views.View) {
+func (w *Lyrics) draw(model *lyricsModel) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	w.view = view
-	w.cellView.SetView(view)
-}
 
-func (w *WidgetLyrics) Draw() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.cellView.Draw()
-}
+	styleDefault := tcell.Style{}
 
-func (w *WidgetLyrics) Resize() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.cellView.Resize()
-}
+	w.Fill(' ', styleDefault)
 
-func (w *WidgetLyrics) Size() (int, int) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	return w.cellView.Size()
+	ex, ey := model.GetBounds()
+	vx, vy := w.Size()
+	if ex < vx {
+		ex = vx
+	}
+	if ey < vy {
+		ey = vy
+	}
+
+	for y := 0; y < ey; y++ {
+		for x := 0; x < ex; {
+			ch, style, comb, wid := model.GetCell(x, y)
+			w.SetContent(x, y, ch, comb, style)
+			x += wid
+		}
+	}
 }

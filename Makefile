@@ -7,11 +7,11 @@ build:
 debug:
 	go build -v -tags=debug -o ./bin/ ./...
 
-run: build
-	exec bin/mpdlrc
+run:
+	go run -v .
 
-run-debug: debug
-	exec bin/mpdlrc
+run-debug:
+	go run -v -tags=debug .
 
 test:
 	go test -v ./...

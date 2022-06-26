@@ -1,19 +1,17 @@
-package internal
+package client
 
 import (
 	"context"
 	"time"
-
-	"github.com/gdamore/tcell/v2"
-	"github.com/gdamore/tcell/v2/views"
 )
 
 type Client interface {
-	NowPlaying() SongType
-	Status() StatusType
-	Ping()
-	Pause()
-	Play()
+	NowPlaying() (Song, error)
+	Status() (Status, error)
+	MusicDir() (string, error)
+	Ping() error
+	Pause() error
+	Play() error
 	Start() error
 	Stop() error
 }
@@ -21,7 +19,7 @@ type Client interface {
 type Watcher interface {
 	Start() error
 	Stop() error
-	PostEvents(ctx context.Context, ch chan<- tcell.Event)
+	PostEvents(ctx context.Context)
 }
 
 type Song interface {
@@ -41,12 +39,4 @@ type Status interface {
 	Random() bool
 	Single() bool
 	Consume() bool
-}
-
-type Widget interface {
-	Draw()
-	View() views.View
-	SetView(view views.View)
-	Size() (x int, y int)
-	Resize()
 }

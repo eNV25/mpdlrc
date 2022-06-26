@@ -1,4 +1,4 @@
-package filepathu
+package ufilepath
 
 import (
 	"path/filepath"

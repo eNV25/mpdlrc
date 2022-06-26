@@ -3,10 +3,13 @@
 #  {{ option name }} = {{ default value }}
 
 # MusicDir is where your music is kept. Environment variables and tilde "~" can be used.
+# This is only used to find the .lrc file if you are not using a unix socket connection,
+# mpd only provides music_directory for local clients.
 MusicDir = "$HOME/Music"
 
 # LyricsDir is where your lyrics are kept. Environment variables and tilde "~" can be used.
-LyricsDir = "$HOME/Music"
+# This will be used regardless of connection type. Only set this if you keep .lrc files separate from audio files for some reason.
+LyricsDir = ""
 
 # MPD section.
 [MPD]
