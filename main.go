@@ -9,6 +9,7 @@ import (
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/pflag"
+	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/config"
@@ -73,17 +74,22 @@ func main() {
 	}
 
 	for _, fpath := range configFiles {
-		f, err := os.Open(fpath)
-		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				log.Println("open config file:", err)
+		var err error
+		func() {
+			var f *os.File
+			f, err = os.Open(fpath)
+			if err != nil {
+				return
 			}
-			continue
+			defer multierr.AppendInvoke(&err, multierr.Invoke(f.Close))
+			err = toml.NewDecoder(f).Decode(cfg)
+			if err != nil {
+				return
+			}
+		}()
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Println("read config file:", err)
 		}
-		if err := toml.NewDecoder(f).Decode(cfg); err != nil {
-			log.Println("decode config file:", err)
-		}
-		f.Close()
 	}
 
 	_ = flags_cfg.Parse(args)
@@ -91,16 +97,15 @@ func main() {
 	cfg.Expand()
 
 	var logBuilder strings.Builder
-
 	defer fmt.Fprint(os.Stderr, &logBuilder)
-
-	log.SetOutput(&logBuilder)
 
 	if flag_dumpcfg {
 		_ = toml.NewEncoder(&logBuilder).Encode(cfg)
 		exitCode = 0
 		return
 	}
+
+	log.SetOutput(&logBuilder)
 
 	err := internal.NewApplication(cfg).Run()
 	if err != nil {
