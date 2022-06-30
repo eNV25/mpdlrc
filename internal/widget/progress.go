@@ -10,6 +10,7 @@ import (
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
+	"github.com/env25/mpdlrc/internal/styles"
 	"github.com/env25/mpdlrc/internal/timerpool"
 )
 
@@ -17,8 +18,6 @@ var _ Widget = &Progress{}
 
 type Progress struct {
 	common
-
-	totalX int
 }
 
 type progressData struct {
@@ -26,6 +25,7 @@ type progressData struct {
 	Elapsed  time.Duration
 	Duration time.Duration
 	elapsedX int
+	totalX   int
 }
 
 func NewProgress() *Progress {
@@ -37,18 +37,20 @@ func (w *Progress) Update(ctx context.Context) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	vx, _ := w.Size()
 	status := client.StatusFromContext(ctx)
 
 	d := &progressData{
 		Playing:  status.State() == "play",
 		Elapsed:  status.Elapsed(),
 		Duration: status.Duration(),
+		totalX:   vx,
 	}
 
 	d.Elapsed += time.Since(event.FromContext(ctx).When())
 
-	d.Duration = d.Duration / time.Duration(w.totalX)
-	d.elapsedX = sort.Search(w.totalX, func(i int) bool { return (time.Duration(i) * d.Duration) >= d.Elapsed })
+	d.Duration = d.Duration / time.Duration(vx)
+	d.elapsedX = sort.Search(d.totalX, func(i int) bool { return (time.Duration(i) * d.Duration) >= d.Elapsed })
 
 	w.update(ctx, d)
 }
@@ -56,7 +58,7 @@ func (w *Progress) Update(ctx context.Context) {
 func (w *Progress) update(ctx context.Context, d *progressData) {
 	go events.PostFunc(ctx, func() { w.draw(d) })
 
-	if !d.Playing || d.elapsedX+1 >= w.totalX {
+	if !d.Playing || d.elapsedX+1 >= d.totalX {
 		return
 	}
 
@@ -86,7 +88,6 @@ func (w *Progress) draw(d *progressData) {
 		rune1 rune = '>'
 		rune2 rune = '-'
 	)
-
 	var (
 		styleDefault = tcell.Style{}
 		style0       = styleDefault.Bold(true)
@@ -95,24 +96,28 @@ func (w *Progress) draw(d *progressData) {
 	)
 
 	w.Fill(' ', styleDefault)
+
+	{
+		r := styles.BorderU
+		s := styles.BorderStyle()
+		for x := 0; x < d.totalX; x++ {
+			w.SetContent(x, 0, r, nil, s)
+		}
+	}
+
 	for x := 0; x < d.elapsedX; x++ {
-		w.SetContent(x, 0, rune0, nil, style0)
+		w.SetContent(x, 1, rune0, nil, style0)
 	}
-	w.SetContent(d.elapsedX, 0, rune1, nil, style1)
-	for x := d.elapsedX + 1; x < w.totalX; x++ {
-		w.SetContent(x, 0, rune2, nil, style2)
+	w.SetContent(d.elapsedX, 1, rune1, nil, style1)
+	for x := d.elapsedX + 1; x < d.totalX; x++ {
+		w.SetContent(x, 1, rune2, nil, style2)
 	}
-}
 
-func (w *Progress) Resize() {
-	w.common.Resize()
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.totalX, _ = w.ViewPort.Size()
-}
-
-func (w *Progress) Size() (int, int) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	return w.totalX, 1
+	{
+		r := styles.BorderD
+		s := styles.BorderStyle()
+		for x := 0; x < d.totalX; x++ {
+			w.SetContent(x, 2, r, nil, s)
+		}
+	}
 }

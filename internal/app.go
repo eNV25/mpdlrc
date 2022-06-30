@@ -36,6 +36,7 @@ type Application struct {
 
 	wprogress *widget.Progress
 	wlyrics   *widget.Lyrics
+	wstatus   *widget.Status
 
 	id     string
 	lyrics *lyrics.Lyrics
@@ -50,6 +51,7 @@ func NewApplication(cfg *config.Config) *Application {
 		watcher:   client.NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password),
 		wprogress: widget.NewProgress(),
 		wlyrics:   widget.NewLyrics(),
+		wstatus:   widget.NewStatus(),
 	}
 
 	app.bctx, app.quit = context.WithCancel(context.Background())
@@ -83,6 +85,7 @@ func (app *Application) update(ev tcell.Event) {
 
 	go app.wprogress.Update(ctx)
 	go app.wlyrics.Update(ctx)
+	go app.wstatus.Update(ctx)
 }
 
 // handleEvent handles dem events.
@@ -144,8 +147,9 @@ func (app *Application) resize(x, y int) {
 	app.cancel()
 	app.Screen.Fill(' ', tcell.Style{})
 	app.Screen.Sync()
-	app.wprogress.View().Resize(0, 0, x, 1)
-	app.wlyrics.View().Resize(0, 1, x, y-1)
+	app.wprogress.View().Resize(0, 0, x, 3)
+	app.wlyrics.View().Resize(0, 3, x, y-6)
+	app.wstatus.View().Resize(0, y-3, x, 3)
 	app.wprogress.Resize()
 	app.wlyrics.Resize()
 }
@@ -194,6 +198,7 @@ func (app *Application) Run() (err error) {
 
 	app.wprogress.SetView(app.Screen)
 	app.wlyrics.SetView(app.Screen)
+	app.wstatus.SetView(app.Screen)
 
 	for ev := range app.events {
 		app.handleEvent(ev)

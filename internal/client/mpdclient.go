@@ -104,7 +104,7 @@ func NewMPDWatcher(net, addr, password string) *MPDWatcher {
 }
 
 func (w *MPDWatcher) Start() (err error) {
-	w.watcher, err = mpd.NewWatcher(w.net, w.addr, w.password, "player")
+	w.watcher, err = mpd.NewWatcher(w.net, w.addr, w.password, "player", "options")
 	runtime.SetFinalizer(w, func(w *MPDWatcher) { _ = w.Stop() })
 	return
 }
@@ -121,6 +121,8 @@ func (w *MPDWatcher) PostEvents(ctx context.Context) {
 		case mpdev := <-w.watcher.Event:
 			switch mpdev {
 			case "player":
+				newEvent = event.NewPlayer
+			case "options":
 				newEvent = event.NewPlayer
 			}
 			if newEvent != nil {
