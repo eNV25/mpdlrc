@@ -2,7 +2,11 @@ package styles
 
 import "github.com/gdamore/tcell/v2"
 
-func BorderStyle() tcell.Style {
+func Default() tcell.Style {
+	return tcell.Style{}
+}
+
+func Border() tcell.Style {
 	return tcell.Style{}.Foreground(tcell.ColorGrey)
 }
 

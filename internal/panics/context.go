@@ -1,6 +1,8 @@
 package panics
 
-import "context"
+import (
+	"context"
+)
 
 type key struct{}
 

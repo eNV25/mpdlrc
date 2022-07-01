@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 
 	"github.com/env25/mpdlrc/internal/client"
@@ -14,6 +13,7 @@ import (
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/panics"
+	"github.com/env25/mpdlrc/internal/styles"
 	"github.com/env25/mpdlrc/internal/timerpool"
 	"github.com/env25/mpdlrc/internal/urunewidth"
 )
@@ -94,106 +94,82 @@ func (w *Lyrics) update(ctx context.Context, d *lyricsData) {
 	go func() {
 		defer panics.Handle(ctx)
 
-		var t time.Time
 		select {
 		case <-ctx.Done():
 			timerpool.Put(timer, false)
 			return
-		case t = <-timer.C:
+		case t := <-timer.C:
 			timerpool.Put(timer, true)
-		}
 
-		w.mu.Lock()
-		defer w.mu.Unlock()
-		d.index += 1
-		d.Elapsed = d.Times[d.index] + time.Since(t)
-		w.update(ctx, d)
+			w.mu.Lock()
+			defer w.mu.Unlock()
+			d.index += 1
+			d.Elapsed = d.Times[d.index] + time.Since(t)
+			w.update(ctx, d)
+		}
 	}()
 }
 
 func (w *Lyrics) model(d *lyricsData) *lyricsModel {
 	m := &lyricsModel{}
 
-	x, y := w.Size()
-	mid := y / 2
-	midoff := 0
+	vx, vy := w.Size()
+	ymid := vy / 2
 
 	m.width = 0
-	m.height = y + 1
+	m.height = vy + 1
 
 	// nothing is highlighted when index is -1 like it should
-	i1 := d.index - mid
-	i2 := d.index + mid + 1
+	y1 := d.index - ymid
+	y2 := d.index + ymid + 1
 
-	var (
-		styleDefault = tcell.Style{}
-		styleHl      = styleDefault.Bold(true).Reverse(true)
-	)
-
+	m.vx = vx
+	m.xwidth = make([]int, m.height)
 	m.maincs = make([][]rune, m.height)
 	m.combcs = make([][][]rune, m.height)
 	m.widths = make([][]int, m.height)
 	m.styles = make([][]tcell.Style, m.height)
-	m.cells = make([]int, m.height)
 
-	row := 0
+	y := 0
 
-	for ; i1 < 0; i1++ {
-		row++
+	for ; y1 < 0; y1++ {
+		y++
 	}
 
-	for i := i1; i < i2 && i < len(d.Lines); i++ {
-		// TODO: StringWidth uses uniseg.Graphemes under the hood.
-		//       Can we do this without running uniseg twice?
-		width := runewidth.StringWidth(d.Lines[i])
-		off := (x - width) / 2
-		if off < 0 {
-			off = 0
-		}
-		width += off
+	for i := y1; i < y2 && i < len(d.Lines); i++ {
+		max := len(d.Lines[i]) * 2
+		m.maincs[y] = make([]rune, max)
+		m.combcs[y] = make([][]rune, max)
+		m.widths[y] = make([]int, max)
+		m.styles[y] = make([]tcell.Style, max)
 
-		m.maincs[row] = make([]rune, width)
-		m.combcs[row] = make([][]rune, width)
-		m.widths[row] = make([]int, width)
-		m.styles[row] = make([]tcell.Style, width)
+		x := 0
 
-		cell := 0
+		gr := uniseg.NewGraphemes(d.Lines[i])
 
-		if row == mid {
-			midoff = off
-		}
+		for gr.Next() {
+			rs := gr.Runes()
 
-		for ; off > 0; off-- {
-			m.maincs[row][cell] = ' '
-			m.widths[row][cell] = 1
-			cell += 1
+			wd := urunewidth.GraphemeWidth(rs)
+
+			m.maincs[y][x] = rs[0]
+			m.combcs[y][x] = rs[1:]
+			m.widths[y][x] = wd
+
+			x += wd
 		}
 
-		grphms := uniseg.NewGraphemes(d.Lines[i])
+		m.xwidth[y] = x
 
-		for grphms.Next() {
-			runes := grphms.Runes()
-
-			wd := urunewidth.GraphemeWidth(runes)
-
-			m.maincs[row][cell] = runes[0]
-			m.combcs[row][cell] = runes[1:]
-			m.widths[row][cell] = wd
-
-			cell += wd
+		if x > m.width {
+			m.width = x
 		}
 
-		m.cells[row] = cell
-
-		if cell > m.width {
-			m.width = cell
-		}
-
-		row++
+		y++
 	}
 
-	for cell := midoff; cell < len(m.maincs[mid]); cell++ {
-		m.styles[mid][cell] = styleHl
+	for x := range m.styles[ymid] {
+		m.styles[ymid][x] = styles.Default().Bold(true).Reverse(true)
 	}
 
 	return m
@@ -202,33 +178,32 @@ func (w *Lyrics) model(d *lyricsData) *lyricsModel {
 var _ cellModel = &lyricsModel{}
 
 type lyricsModel struct {
+	vx     int
+	width  int
+	height int
+	xwidth []int
 	maincs [][]rune
 	combcs [][][]rune
 	widths [][]int
 	styles [][]tcell.Style
-	cells  []int
-	width  int
-	height int
 }
 
 func (m *lyricsModel) GetCell(x, y int) (rune, tcell.Style, []rune, int) {
-	var styleDefault tcell.Style
-	if x < 0 || y < 0 || y >= m.height || x >= m.cells[y] {
-		return ' ', styleDefault, nil, 1
+	x = x - (m.vx-m.xwidth[y])/2 // centre
+	if y < 0 || x < 0 || y >= m.height || x >= m.xwidth[y] {
+		return ' ', styles.Default(), nil, 1
 	}
 	return m.maincs[y][x], m.styles[y][x], m.combcs[y][x], m.widths[y][x]
 }
 func (m *lyricsModel) GetBounds() (int, int) { return m.width, m.height }
 
-func (w *Lyrics) draw(model *lyricsModel) {
+func (w *Lyrics) draw(m *lyricsModel) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	styleDefault := tcell.Style{}
+	w.Fill(' ', styles.Default())
 
-	w.Fill(' ', styleDefault)
-
-	ex, ey := model.GetBounds()
+	ex, ey := m.GetBounds()
 	vx, vy := w.Size()
 	if ex < vx {
 		ex = vx
@@ -239,7 +214,7 @@ func (w *Lyrics) draw(model *lyricsModel) {
 
 	for y := 0; y < ey; y++ {
 		for x := 0; x < ex; {
-			ch, style, comb, wid := model.GetCell(x, y)
+			ch, style, comb, wid := m.GetCell(x, y)
 			w.SetContent(x, y, ch, comb, style)
 			x += wid
 		}
