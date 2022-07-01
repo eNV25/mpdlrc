@@ -7,17 +7,15 @@ import (
 	"github.com/gdamore/tcell/v2"
 
 	"github.com/env25/mpdlrc/internal/event"
+	"github.com/env25/mpdlrc/internal/panics"
 )
 
 func Post(ctx context.Context, newEvent func() tcell.Event) {
-	select {
-	case <-ctx.Done():
-	case FromContext(ctx) <- newEvent():
-	}
+	PostEvent(ctx, newEvent())
 }
 
 func PostEveryTick(ctx context.Context, newEvent func() tcell.Event, d time.Duration) {
-	events := FromContext(ctx)
+	defer panics.Handle(ctx)
 	ticker := time.NewTicker(d)
 	defer ticker.Stop()
 	for {
@@ -25,18 +23,22 @@ func PostEveryTick(ctx context.Context, newEvent func() tcell.Event, d time.Dura
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			select {
-			case <-ctx.Done():
-				return
-			case events <- newEvent():
-			}
+			PostEvent(ctx, newEvent())
 		}
 	}
 }
 
-func PostFunc(ctx context.Context, f func()) {
+func PostEvent(ctx context.Context, ev tcell.Event) {
+	defer panics.Handle(ctx)
+	events := FromContext(ctx)
+	defer func() { _ = recover() }()
 	select {
 	case <-ctx.Done():
-	case FromContext(ctx) <- event.NewFunction(f):
+		return
+	case events <- ev:
 	}
+}
+
+func PostFunc(ctx context.Context, f func()) {
+	PostEvent(ctx, event.NewFunction(f))
 }

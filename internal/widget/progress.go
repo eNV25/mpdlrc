@@ -10,6 +10,7 @@ import (
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
+	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/styles"
 	"github.com/env25/mpdlrc/internal/timerpool"
 )
@@ -34,6 +35,8 @@ func NewProgress() *Progress {
 }
 
 func (w *Progress) Update(ctx context.Context) {
+	defer panics.Handle(ctx)
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -64,6 +67,8 @@ func (w *Progress) update(ctx context.Context, d *progressData) {
 
 	timer := timerpool.Get(d.Duration)
 	go func() {
+		defer panics.Handle(ctx)
+
 		select {
 		case <-ctx.Done():
 			timerpool.Put(timer, false)

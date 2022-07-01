@@ -10,6 +10,7 @@ import (
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/lyrics"
+	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/styles"
 	"github.com/env25/mpdlrc/internal/urunewidth"
 )
@@ -45,6 +46,8 @@ type statusData struct {
 }
 
 func (w *Status) Update(ctx context.Context) {
+	defer panics.Handle(ctx)
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 

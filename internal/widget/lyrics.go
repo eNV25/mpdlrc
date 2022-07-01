@@ -13,6 +13,7 @@ import (
 	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/lyrics"
+	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/timerpool"
 	"github.com/env25/mpdlrc/internal/urunewidth"
 )
@@ -42,6 +43,8 @@ func NewLyrics() *Lyrics {
 }
 
 func (w *Lyrics) Update(ctx context.Context) {
+	defer panics.Handle(ctx)
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -89,6 +92,8 @@ func (w *Lyrics) update(ctx context.Context, d *lyricsData) {
 
 	timer := timerpool.Get(d.Times[d.index+1] - d.Elapsed)
 	go func() {
+		defer panics.Handle(ctx)
+
 		var t time.Time
 		select {
 		case <-ctx.Done():

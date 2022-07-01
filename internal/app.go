@@ -16,6 +16,7 @@ import (
 	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/lyrics"
+	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/ufilepath"
 	"github.com/env25/mpdlrc/internal/upath"
 	"github.com/env25/mpdlrc/internal/widget"
@@ -25,10 +26,10 @@ import (
 type Application struct {
 	tcell.Screen
 
-	bctx   context.Context
-	cancel func()
-	quit   func()
 	events chan tcell.Event
+	bctx   context.Context
+	quit   func()
+	cancel func()
 
 	cfg     *config.Config
 	client  *client.MPDClient
@@ -46,6 +47,7 @@ type Application struct {
 func NewApplication(cfg *config.Config) *Application {
 	app := &Application{
 		cfg:       cfg,
+		bctx:      context.Background(),
 		events:    make(chan tcell.Event),
 		client:    client.NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password),
 		watcher:   client.NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password),
@@ -54,8 +56,9 @@ func NewApplication(cfg *config.Config) *Application {
 		wstatus:   widget.NewStatus(),
 	}
 
-	app.bctx, app.quit = context.WithCancel(context.Background())
+	app.bctx = panics.ContextWithHook(app.bctx, app.Quit)
 	app.bctx = events.ContextWith(app.bctx, app.events)
+	app.bctx, app.quit = context.WithCancel(app.bctx)
 
 	_, app.cancel = context.WithCancel(app.bctx)
 	return app
@@ -191,10 +194,11 @@ func (app *Application) Run() (err error) {
 		log.Print("\n", app.cfg)
 	}
 
-	// Screen.ChannelEvents closes events
-	go app.Screen.ChannelEvents(app.events, app.bctx.Done())
-	go app.watcher.PostEvents(app.bctx)
-	go events.PostEveryTick(app.bctx, event.NewPing, 5*time.Second)
+	ctx := app.bctx
+
+	go app.Screen.ChannelEvents(app.events, ctx.Done())
+	go app.watcher.PostEvents(ctx)
+	go events.PostEveryTick(ctx, event.NewPing, 5*time.Second)
 
 	app.wprogress.SetView(app.Screen)
 	app.wlyrics.SetView(app.Screen)
