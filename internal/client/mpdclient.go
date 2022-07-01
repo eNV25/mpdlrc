@@ -13,6 +13,7 @@ import (
 
 	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
+	"github.com/env25/mpdlrc/internal/panics"
 )
 
 type MPDClient struct {
@@ -112,8 +113,8 @@ func (w *MPDWatcher) Start() (err error) {
 func (w *MPDWatcher) Stop() error { return w.watcher.Close() }
 
 func (w *MPDWatcher) PostEvents(ctx context.Context) {
-	ch := events.FromContext(ctx)
-	var newEvent (func() tcell.Event)
+	defer panics.Handle(ctx)
+	var newEvent func() tcell.Event
 	for {
 		select {
 		case <-ctx.Done():
@@ -126,11 +127,7 @@ func (w *MPDWatcher) PostEvents(ctx context.Context) {
 				newEvent = event.NewPlayer
 			}
 			if newEvent != nil {
-				select {
-				case <-ctx.Done():
-					return
-				case ch <- newEvent():
-				}
+				events.PostEvent(ctx, newEvent())
 				newEvent = nil
 			}
 		}
