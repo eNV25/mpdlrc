@@ -5,8 +5,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
-
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
@@ -88,39 +86,27 @@ func (w *Progress) draw(d *progressData) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	const (
-		rune0 rune = '='
-		rune1 rune = '>'
-		rune2 rune = '-'
-	)
-	var (
-		styleDefault = tcell.Style{}
-		style0       = styleDefault.Bold(true)
-		style1       = style0
-		style2       = styleDefault.Dim(true)
-	)
-
-	w.Fill(' ', styleDefault)
+	w.Fill(' ', styles.Default())
 
 	{
 		r := styles.BorderU
-		s := styles.BorderStyle()
+		s := styles.Border()
 		for x := 0; x < d.totalX; x++ {
 			w.SetContent(x, 0, r, nil, s)
 		}
 	}
 
 	for x := 0; x < d.elapsedX; x++ {
-		w.SetContent(x, 1, rune0, nil, style0)
+		w.SetContent(x, 1, '=', nil, styles.Default().Bold(true))
 	}
-	w.SetContent(d.elapsedX, 1, rune1, nil, style1)
+	w.SetContent(d.elapsedX, 1, '>', nil, styles.Default().Bold(true))
 	for x := d.elapsedX + 1; x < d.totalX; x++ {
-		w.SetContent(x, 1, rune2, nil, style2)
+		w.SetContent(x, 1, '-', nil, styles.Default().Dim(true))
 	}
 
 	{
 		r := styles.BorderD
-		s := styles.BorderStyle()
+		s := styles.Border()
 		for x := 0; x < d.totalX; x++ {
 			w.SetContent(x, 2, r, nil, s)
 		}

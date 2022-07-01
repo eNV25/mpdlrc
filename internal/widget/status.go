@@ -68,18 +68,13 @@ func (w *Status) draw(d *statusData) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	var (
-		styleDefault = tcell.Style{}
-		styleBold    = styleDefault.Bold(true)
-	)
-
 	vx, _ := w.Size()
 
-	w.Fill(' ', styleDefault)
+	w.Fill(' ', styles.Default())
 
 	{
 		r := styles.BorderU
-		s := styles.BorderStyle()
+		s := styles.Border()
 		for x := 0; x < vx; x++ {
 			w.SetContent(x, 0, r, nil, s)
 		}
@@ -87,7 +82,7 @@ func (w *Status) draw(d *statusData) {
 
 	{
 		r := styles.BorderD
-		s := styles.BorderStyle()
+		s := styles.Border()
 		for x := 0; x < vx; x++ {
 			w.SetContent(x, 2, r, nil, s)
 		}
@@ -107,7 +102,7 @@ func (w *Status) draw(d *statusData) {
 			status = append(status, "no lyrics "...)
 		}
 		for x, c := range status {
-			w.SetContent(x, 1, rune(c), nil, styleDefault)
+			w.SetContent(x, 1, rune(c), nil, styles.Default())
 		}
 	}
 
@@ -126,7 +121,7 @@ func (w *Status) draw(d *statusData) {
 			status[4] = 'c'
 		}
 		for o, c := range status {
-			w.SetContent(vx-len(status)+o, 1, rune(c), nil, styleDefault)
+			w.SetContent(vx-len(status)+o, 1, rune(c), nil, styles.Default())
 		}
 	}
 
@@ -139,9 +134,9 @@ func (w *Status) draw(d *statusData) {
 			c string
 			s tcell.Style
 		}{
-			{pre, styleDefault},
-			{title, styleBold},
-			{suf, styleDefault},
+			{pre, styles.Default()},
+			{title, styles.Default().Bold(true)},
+			{suf, styles.Default()},
 		}
 		x := ((vx - runewidth.StringWidth(title)) / 2) - runewidth.StringWidth(pre)
 		for _, c := range cs {
