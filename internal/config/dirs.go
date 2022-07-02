@@ -39,6 +39,9 @@ func HomeDir(usr string) (h string) {
 func ExpandTilde(str string) string {
 	if strings.HasPrefix(str, "~") {
 		u, p, sep := ustrings.Cut(str[1:], string(os.PathSeparator))
+		if os.PathSeparator != '/' && !sep {
+			u, p, sep = ustrings.Cut(str[1:], string('/'))
+		}
 		if sep {
 			// ~/path or ~user/path
 			return HomeDir(u) + string(os.PathSeparator) + p
