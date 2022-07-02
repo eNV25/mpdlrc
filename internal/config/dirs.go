@@ -37,15 +37,15 @@ func HomeDir(usr string) (h string) {
 }
 
 func ExpandTilde(str string) string {
-	switch {
-	case str == "":
-		return ""
-	case strings.HasPrefix(str, "~"):
-		// ~ or ~/path or ~user/path
-		u, p, _ := ustrings.Cut(str[1:], string(filepath.Separator))
-		return filepath.Join(HomeDir(u), p) // calls filepath.Clean
-	default:
-		// path or /path
-		return filepath.Clean(str)
+	if strings.HasPrefix(str, "~") {
+		u, p, sep := ustrings.Cut(str[1:], string(os.PathSeparator))
+		if sep {
+			// ~/path or ~user/path
+			return HomeDir(u) + string(os.PathSeparator) + p
+		}
+		// ~ or ~user
+		return HomeDir(u)
 	}
+	// path or /path
+	return str
 }
