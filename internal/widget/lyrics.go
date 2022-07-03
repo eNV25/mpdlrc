@@ -120,43 +120,34 @@ func (w *Lyrics) model(d *lyricsData) *lyricsModel {
 	m.height = vy + 1
 
 	// nothing is highlighted when index is -1 like it should
-	y1 := d.index - ymid
-	y2 := d.index + ymid + 1
+	i1 := d.index - ymid
+	i2 := d.index + ymid + 1
 
 	m.vx = vx
 	m.xwidth = make([]int, m.height)
-	m.maincs = make([][]rune, m.height)
 	m.combcs = make([][][]rune, m.height)
 	m.widths = make([][]int, m.height)
-	m.styles = make([][]tcell.Style, m.height)
+	m.styles = make([]tcell.Style, m.height)
 
 	y := 0
 
-	for ; y1 < 0; y1++ {
+	for ; i1 < 0; i1++ {
 		y++
 	}
 
-	for i := y1; i < y2 && i < len(d.Lines); i++ {
+	for i := i1; i < i2 && i < len(d.Lines); i++ {
+		x := 0
 		max := len(d.Lines[i]) * 2
-		m.maincs[y] = make([]rune, max)
 		m.combcs[y] = make([][]rune, max)
 		m.widths[y] = make([]int, max)
-		m.styles[y] = make([]tcell.Style, max)
-
-		x := 0
 
 		gr := uniseg.NewGraphemes(d.Lines[i])
 
-		for gr.Next() {
+		for wd := 0; gr.Next(); x += wd {
 			rs := gr.Runes()
-
-			wd := urunewidth.GraphemeWidth(rs)
-
-			m.maincs[y][x] = rs[0]
-			m.combcs[y][x] = rs[1:]
+			wd = urunewidth.GraphemeWidth(rs)
+			m.combcs[y][x] = rs
 			m.widths[y][x] = wd
-
-			x += wd
 		}
 
 		m.xwidth[y] = x
@@ -168,9 +159,7 @@ func (w *Lyrics) model(d *lyricsData) *lyricsModel {
 		y++
 	}
 
-	for x := range m.styles[ymid] {
-		m.styles[ymid][x] = styles.Default().Bold(true).Reverse(true)
-	}
+	m.styles[ymid] = styles.Default().Bold(true).Reverse(true)
 
 	return m
 }
@@ -182,18 +171,17 @@ type lyricsModel struct {
 	width  int
 	height int
 	xwidth []int
-	maincs [][]rune
 	combcs [][][]rune
+	styles []tcell.Style
 	widths [][]int
-	styles [][]tcell.Style
 }
 
-func (m *lyricsModel) GetCell(x, y int) (rune, tcell.Style, []rune, int) {
+func (m *lyricsModel) GetCell(x, y int) (rune, []rune, tcell.Style, int) {
 	x = x - (m.vx-m.xwidth[y])/2 // centre
 	if y < 0 || x < 0 || y >= m.height || x >= m.xwidth[y] {
-		return ' ', styles.Default(), nil, 1
+		return ' ', nil, styles.Default(), 1
 	}
-	return m.maincs[y][x], m.styles[y][x], m.combcs[y][x], m.widths[y][x]
+	return m.combcs[y][x][0], m.combcs[y][x][1:], m.styles[y], m.widths[y][x]
 }
 func (m *lyricsModel) GetBounds() (int, int) { return m.width, m.height }
 
@@ -214,7 +202,7 @@ func (w *Lyrics) draw(m *lyricsModel) {
 
 	for y := 0; y < ey; y++ {
 		for x := 0; x < ex; {
-			ch, style, comb, wid := m.GetCell(x, y)
+			ch, comb, style, wid := m.GetCell(x, y)
 			w.SetContent(x, y, ch, comb, style)
 			x += wid
 		}
