@@ -15,7 +15,7 @@ func Get(d time.Duration) *time.Timer {
 	return time.NewTimer(d)
 }
 
-// Put returns t to the pool. Set consumed to true if you have recieved from C.
+// Put returns t to the pool. Set consumed to true if you have received from C.
 //
 // timer cannot be accessed after returning to the pool.
 func Put(timer *time.Timer, consumed bool) {
