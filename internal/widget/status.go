@@ -2,6 +2,7 @@ package widget
 
 import (
 	"context"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
@@ -126,20 +127,38 @@ func (w *Status) draw(d *statusData) {
 	}
 
 	{
-		const margin = "  "
-		pre := margin + d.Song.Artist() + " - "
-		title := d.Song.Title()
-		suf := " - " + d.Song.Album() + " " + "(" + d.Song.Date() + ")" + margin
-		cs := [...]*struct {
+		var pre strings.Builder
+		var title strings.Builder
+		var suf strings.Builder
+		pre.WriteString("  ")
+		if s := d.Song.Artist(); s != "" {
+			pre.WriteString(s)
+			pre.WriteString(" - ")
+		}
+		if s := d.Song.Title(); s != "" {
+			title.WriteString(s)
+		} else {
+			title.WriteString(d.Song.File())
+		}
+		if s := d.Song.Album(); s != "" {
+			suf.WriteString(" - ")
+			suf.WriteString(s)
+		}
+		if s := d.Song.Date(); s != "" {
+			suf.WriteString(" (")
+			suf.WriteString(s)
+			suf.WriteString(")")
+		}
+		suf.WriteString("  ")
+		x := ((vx - runewidth.StringWidth(title.String())) / 2) - runewidth.StringWidth(pre.String())
+		for _, c := range &[...]*struct {
 			c string
 			s tcell.Style
 		}{
-			{pre, styles.Default()},
-			{title, styles.Default().Bold(true)},
-			{suf, styles.Default()},
-		}
-		x := ((vx - runewidth.StringWidth(title)) / 2) - runewidth.StringWidth(pre)
-		for _, c := range cs {
+			{pre.String(), styles.Default()},
+			{title.String(), styles.Default().Bold(true)},
+			{suf.String(), styles.Default()},
+		} {
 			gr := uniseg.NewGraphemes(c.c)
 			for gr.Next() {
 				rs := gr.Runes()

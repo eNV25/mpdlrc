@@ -54,6 +54,7 @@ func NewApplication(cfg *config.Config) *Application {
 		wprogress: widget.NewProgress(),
 		wlyrics:   widget.NewLyrics(),
 		wstatus:   widget.NewStatus(),
+		lyrics:    &lyrics.Lyrics{},
 	}
 
 	app.bctx = panics.ContextWithHook(app.bctx, app.Quit)
@@ -68,9 +69,10 @@ func NewApplication(cfg *config.Config) *Application {
 func (app *Application) update(ev tcell.Event) {
 	app.cancel()
 
-	song, _ := app.client.NowPlaying() // TODO
-	status, _ := app.client.Status()   // TODO
-	if song == nil || status == nil {
+	song, err := app.client.NowPlaying() // TODO
+	status, errr := app.client.Status()  // TODO
+	if err != nil || errr != nil {
+		log.Printf("%+v\n", multierr.Append(err, errr))
 		return
 	}
 
