@@ -27,7 +27,6 @@ type Application struct {
 	tcell.Screen
 
 	events chan tcell.Event
-	bctx   context.Context
 	quit   func()
 	cancel func()
 
@@ -47,7 +46,6 @@ type Application struct {
 func NewApplication(cfg *config.Config) *Application {
 	app := &Application{
 		cfg:       cfg,
-		bctx:      context.Background(),
 		events:    make(chan tcell.Event),
 		client:    client.NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password),
 		watcher:   client.NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password),
@@ -57,16 +55,11 @@ func NewApplication(cfg *config.Config) *Application {
 		lyrics:    &lyrics.Lyrics{},
 	}
 
-	app.bctx = panics.ContextWithHook(app.bctx, app.Quit)
-	app.bctx = events.ContextWith(app.bctx, app.events)
-	app.bctx, app.quit = context.WithCancel(app.bctx)
-
-	_, app.cancel = context.WithCancel(app.bctx)
 	return app
 }
 
 // update subwidgets after querying information from client.
-func (app *Application) update(ev tcell.Event) {
+func (app *Application) update(ctx context.Context) {
 	app.cancel()
 
 	song, err := app.client.NowPlaying() // TODO
@@ -81,12 +74,10 @@ func (app *Application) update(ev tcell.Event) {
 		app.lyrics = lyrics.New(file)
 	}
 
-	ctx := app.bctx
-	ctx, app.cancel = context.WithCancel(ctx)
-	ctx = event.ContextWith(ctx, ev)
 	ctx = client.ContextWithSong(ctx, song)
 	ctx = client.ContextWithStatus(ctx, status)
 	ctx = lyrics.ContextWith(ctx, app.lyrics)
+	ctx, app.cancel = context.WithCancel(ctx)
 
 	go app.wprogress.Update(ctx)
 	go app.wlyrics.Update(ctx)
@@ -94,7 +85,7 @@ func (app *Application) update(ev tcell.Event) {
 }
 
 // handleEvent handles dem events.
-func (app *Application) handleEvent(ev tcell.Event) bool {
+func (app *Application) handleEvent(ctx context.Context, ev tcell.Event) bool {
 	if config.Debug {
 		log.Printf("event: %T", ev)
 	}
@@ -140,7 +131,8 @@ resize:
 	app.resize(x, y)
 	goto update
 update:
-	app.update(ev)
+	ctx = event.ContextWith(ctx, ev)
+	app.update(ctx)
 	return true
 quit:
 	app.Quit()
@@ -191,12 +183,19 @@ func (app *Application) Run() (err error) {
 
 	defer app.Quit()
 
+	// Update config with data from MPD
 	app.cfg.FromClient(app.client)
 	if config.Debug {
 		log.Print("\n", app.cfg)
 	}
 
-	ctx := app.bctx
+	ctx := context.Background()
+	ctx = panics.ContextWithHook(ctx, app.Quit)
+	ctx = events.ContextWith(ctx, app.events)
+	ctx, app.quit = context.WithCancel(ctx)
+
+	// We make sure this function value is never nil
+	app.cancel = func() {}
 
 	go app.Screen.ChannelEvents(app.events, ctx.Done())
 	go app.watcher.PostEvents(ctx)
@@ -207,7 +206,7 @@ func (app *Application) Run() (err error) {
 	app.wstatus.SetView(app.Screen)
 
 	for ev := range app.events {
-		app.handleEvent(ev)
+		app.handleEvent(ctx, ev)
 		app.Show()
 	}
 	return
