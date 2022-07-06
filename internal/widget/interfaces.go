@@ -16,6 +16,6 @@ type Widget interface {
 }
 
 type cellModel interface {
-	GetCell(x, y int) (rune, []rune, tcell.Style, int)
-	GetBounds() (int, int)
+	GetCell(x, y int) (mainc rune, combc []rune, style tcell.Style, cwidth int)
+	GetBounds() (width int, height int)
 }

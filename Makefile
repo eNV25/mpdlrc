@@ -17,6 +17,9 @@ test:
 	go test -v ./...
 
 fmt:
+	go mod tidy
+	go fix ./...
+	go fmt ./...
 	gofmt -s -w -l .
 	goimports -local '${go.module}' -w -l .
 	gofumpt -w -l .

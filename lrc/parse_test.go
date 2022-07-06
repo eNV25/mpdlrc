@@ -70,7 +70,7 @@ func TestParseString(t *testing.T) {
 func BenchmarkParseString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for i := range tests {
-			ParseString(tests[i].lrc)
+			_, _, _ = ParseString(tests[i].lrc)
 		}
 	}
 }

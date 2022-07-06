@@ -1,6 +1,6 @@
 module github.com/env25/mpdlrc
 
-go 1.18
+go 1.17
 
 require (
 	github.com/fhs/gompd/v2 v2.2.0
