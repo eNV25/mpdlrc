@@ -73,6 +73,7 @@ func main() {
 		return
 	}
 
+	// We merge config files first
 	for _, fpath := range configFiles {
 		var err error
 		func() {
@@ -92,6 +93,7 @@ func main() {
 		}
 	}
 
+	// We parse config flags later, so it overrides config files.
 	_ = flags_cfg.Parse(args)
 
 	cfg.Expand()
