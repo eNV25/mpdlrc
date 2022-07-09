@@ -30,9 +30,8 @@ type Application struct {
 	quit   func()
 	cancel func()
 
-	cfg     *config.Config
-	client  *client.MPDClient
-	watcher *client.MPDWatcher
+	cfg    *config.Config
+	client *client.MPDClient
 
 	wprogress *widget.Progress
 	wlyrics   *widget.Lyrics
@@ -48,7 +47,6 @@ func NewApplication(cfg *config.Config) *Application {
 		cfg:       cfg,
 		events:    make(chan tcell.Event),
 		client:    client.NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password),
-		watcher:   client.NewMPDWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password),
 		wprogress: widget.NewProgress(),
 		wlyrics:   widget.NewLyrics(),
 		wstatus:   widget.NewStatus(),
@@ -58,34 +56,7 @@ func NewApplication(cfg *config.Config) *Application {
 	return app
 }
 
-// update subwidgets after querying information from client.
-func (app *Application) update(ctx context.Context) {
-	app.cancel()
-
-	song, err := app.client.NowPlaying() // TODO
-	status, errr := app.client.Status()  // TODO
-	if err != nil || errr != nil {
-		log.Printf("%+v\n", multierr.Append(err, errr))
-		return
-	}
-
-	if id := song.ID(); id != app.id {
-		file := filepath.Join(app.cfg.LyricsDir, ufilepath.FromSlash(upath.ReplaceExt(song.File(), ".lrc")))
-		app.lyrics = lyrics.New(file)
-	}
-
-	ctx = client.ContextWithSong(ctx, song)
-	ctx = client.ContextWithStatus(ctx, status)
-	ctx = lyrics.ContextWith(ctx, app.lyrics)
-	ctx, app.cancel = context.WithCancel(ctx)
-
-	go app.wprogress.Update(ctx)
-	go app.wlyrics.Update(ctx)
-	go app.wstatus.Update(ctx)
-}
-
-// handleEvent handles dem events.
-func (app *Application) handleEvent(ctx context.Context, ev tcell.Event) bool {
+func (app *Application) update(ctx context.Context, ev tcell.Event) {
 	if config.Debug {
 		log.Printf("event: %T", ev)
 	}
@@ -103,19 +74,10 @@ func (app *Application) handleEvent(ctx context.Context, ev tcell.Event) bool {
 			case 'q':
 				goto quit
 			case ' ':
-				return true
+				return
 			}
 		}
-	case *tcell.EventResize:
-		// guaranteed to run at program start
-		x, y = ev.Size()
-		goto resize
-	case *event.Player:
-		goto update
-	case *event.Ping:
-		_ = app.client.Ping()
-		return true
-	case *event.Function:
+	case *event.Func:
 		if config.Debug {
 			log.Println(
 				"event: *event.Function: ev.Func:",
@@ -123,32 +85,58 @@ func (app *Application) handleEvent(ctx context.Context, ev tcell.Event) bool {
 			)
 		}
 		ev.Func()
-		return true
-	default:
+		return
+	case *tcell.EventResize:
+		// guaranteed to run at program start
+		x, y = ev.Size()
+		goto resize
+	case *client.PlayerEvent:
+		goto update
+	case *client.OptionsEvent:
+		goto update
 	}
-	return false
-resize:
-	app.resize(x, y)
-	goto update
-update:
-	ctx = event.ContextWith(ctx, ev)
-	app.update(ctx)
-	return true
+	return
 quit:
 	app.Quit()
-	return true
-}
-
-// resize is run after a resize event.
-func (app *Application) resize(x, y int) {
+	return
+resize:
 	app.cancel()
 	app.Screen.Fill(' ', tcell.Style{})
 	app.Screen.Sync()
 	app.wprogress.View().Resize(0, 0, x, 3)
 	app.wlyrics.View().Resize(0, 3, x, y-6)
 	app.wstatus.View().Resize(0, y-3, x, 3)
-	app.wprogress.Resize()
-	app.wlyrics.Resize()
+	goto update
+update:
+	app.cancel()
+
+	song, status, lrcs, err := app.data()
+	if err != nil {
+		log.Printf("%+v\n", err)
+		return
+	}
+
+	ctx = client.ContextWithSong(ctx, song)
+	ctx = client.ContextWithStatus(ctx, status)
+	ctx = lyrics.ContextWith(ctx, lrcs)
+	ctx, app.cancel = context.WithCancel(ctx)
+
+	go app.wprogress.Update(ctx, ev)
+	go app.wlyrics.Update(ctx, ev)
+	go app.wstatus.Update(ctx, ev)
+}
+
+func (app *Application) data() (client.Song, client.Status, *lyrics.Lyrics, error) {
+	song, err := app.client.NowPlaying() // TODO
+	status, errr := app.client.Status()  // TODO
+	if err != nil || errr != nil {
+		return nil, nil, nil, multierr.Append(err, errr)
+	}
+	if id := song.ID(); id != app.id {
+		file := filepath.Join(app.cfg.LyricsDir, ufilepath.FromSlash(upath.ReplaceExt(song.File(), ".lrc")))
+		app.lyrics = lyrics.New(file)
+	}
+	return song, status, app.lyrics, nil
 }
 
 // Quit the application.
@@ -175,12 +163,6 @@ func (app *Application) Run() (err error) {
 	}
 	defer multierr.AppendInvoke(&err, multierr.Invoke(app.client.Stop))
 
-	err = app.watcher.Start()
-	if err != nil {
-		return
-	}
-	defer multierr.AppendInvoke(&err, multierr.Invoke(app.watcher.Stop))
-
 	defer app.Quit()
 
 	// Update config with data from MPD
@@ -198,15 +180,15 @@ func (app *Application) Run() (err error) {
 	app.cancel = func() {}
 
 	go app.Screen.ChannelEvents(app.events, ctx.Done())
-	go app.watcher.PostEvents(ctx)
-	go events.PostEveryTick(ctx, event.NewPing, 5*time.Second)
+	go app.client.PostEvents(ctx)
+	go events.PostFuncTicker(ctx, func() { _ = app.client.Ping() }, 5*time.Second)
 
 	app.wprogress.SetView(app.Screen)
 	app.wlyrics.SetView(app.Screen)
 	app.wstatus.SetView(app.Screen)
 
 	for ev := range app.events {
-		app.handleEvent(ctx, ev)
+		app.update(ctx, ev)
 		app.Show()
 	}
 	return

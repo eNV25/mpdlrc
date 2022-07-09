@@ -7,11 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fhs/gompd/v2/mpd"
 	"github.com/gdamore/tcell/v2"
 	"go.uber.org/atomic"
+	"go.uber.org/multierr"
 
-	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/panics"
 )
@@ -19,7 +18,9 @@ import (
 type MPDClient struct {
 	closed atomic.Bool
 
-	client              *mpd.Client
+	c *mpd_Client
+	w *mpd_Watcher
+
 	net, addr, password string
 }
 
@@ -36,8 +37,24 @@ func NewMPDClient(net, addr, password string) *MPDClient {
 }
 
 func (c *MPDClient) Start() (err error) {
-	c.client, err = mpd.DialAuthenticated(c.net, c.addr, c.password)
+	c.c, err = mpd_DialAuthenticated(c.net, c.addr, c.password)
+	if err != nil {
+		return err
+	}
+	c.w, err = mpd_NewWatcher(c.net, c.addr, c.password)
+	if err != nil {
+		return err
+	}
 	runtime.SetFinalizer(c, func(c *MPDClient) { _ = c.Stop() })
+	return
+}
+
+func (c *MPDClient) Stop() (err error) {
+	if !c.closed.CAS(false, true) {
+		return os.ErrClosed
+	}
+	multierr.AppendInvoke(&err, multierr.Invoke(c.c.Close))
+	multierr.AppendInvoke(&err, multierr.Invoke(c.w.Close))
 	return
 }
 
@@ -45,35 +62,28 @@ func (c *MPDClient) Pause() error {
 	if c.closed.Load() {
 		return os.ErrClosed
 	}
-	return c.client.Pause(true)
+	return c.c.Pause(true)
 }
 
 func (c *MPDClient) Play() error {
 	if c.closed.Load() {
 		return os.ErrClosed
 	}
-	return c.client.Pause(false)
+	return c.c.Pause(false)
 }
 
 func (c *MPDClient) Ping() error {
 	if c.closed.Load() {
 		return os.ErrClosed
 	}
-	return c.client.Ping()
-}
-
-func (c *MPDClient) Stop() error {
-	if !c.closed.CAS(false, true) {
-		return os.ErrClosed
-	}
-	return c.client.Close()
+	return c.c.Ping()
 }
 
 func (c *MPDClient) NowPlaying() (Song, error) {
 	if c.closed.Load() {
 		return nil, os.ErrClosed
 	}
-	attrs, err := c.client.CurrentSong()
+	attrs, err := c.c.CurrentSong()
 	return MPDSong(attrs), err
 }
 
@@ -81,7 +91,7 @@ func (c *MPDClient) Status() (Status, error) {
 	if c.closed.Load() {
 		return nil, os.ErrClosed
 	}
-	attrs, err := c.client.Status()
+	attrs, err := c.c.Status()
 	return MPDStatus(attrs), err
 }
 
@@ -89,42 +99,25 @@ func (c *MPDClient) MusicDir() (string, error) {
 	if c.closed.Load() {
 		return "", os.ErrClosed
 	}
-	attrs, err := c.client.Command("config").Attrs()
+	attrs, err := c.c.Command("config").Attrs()
 	return attrs["music_directory"], err
 }
 
-type MPDWatcher struct {
-	watcher             *mpd.Watcher
-	net, addr, password string
-}
-
-var _ Watcher = &MPDWatcher{}
-
-func NewMPDWatcher(net, addr, password string) *MPDWatcher {
-	return &MPDWatcher{net: net, addr: addr, password: password}
-}
-
-func (w *MPDWatcher) Start() (err error) {
-	w.watcher, err = mpd.NewWatcher(w.net, w.addr, w.password, "player", "options")
-	runtime.SetFinalizer(w, func(w *MPDWatcher) { _ = w.Stop() })
-	return
-}
-
-func (w *MPDWatcher) Stop() error { return w.watcher.Close() }
-
-func (w *MPDWatcher) PostEvents(ctx context.Context) {
+func (c *MPDClient) PostEvents(ctx context.Context) {
 	defer panics.Handle(ctx)
 	var newEvent func() tcell.Event
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case mpdev := <-w.watcher.Event:
+		case <-c.w.Error:
+			// no-op
+		case mpdev := <-c.w.Event:
 			switch mpdev {
 			case "player":
-				newEvent = event.NewPlayer
+				newEvent = newPlayerEvent
 			case "options":
-				newEvent = event.NewPlayer
+				newEvent = newOptionsEvent
 			}
 			if newEvent != nil {
 				events.PostEvent(ctx, newEvent())

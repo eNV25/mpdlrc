@@ -9,7 +9,6 @@ import (
 	"github.com/rivo/uniseg"
 
 	"github.com/env25/mpdlrc/internal/client"
-	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/panics"
@@ -42,8 +41,17 @@ func NewLyrics() *Lyrics {
 	return w
 }
 
-func (w *Lyrics) Update(ctx context.Context) {
+func (w *Lyrics) Update(ctx context.Context, ev tcell.Event) {
 	defer panics.Handle(ctx)
+
+	switch ev.(type) {
+	case *tcell.EventResize:
+		w.resize()
+	case *client.PlayerEvent:
+		// no-op
+	default:
+		return
+	}
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -58,7 +66,7 @@ func (w *Lyrics) Update(ctx context.Context) {
 		Lines:   lyrics.Lines,
 	}
 
-	d.Elapsed += time.Since(event.FromContext(ctx).When())
+	d.Elapsed += time.Since(ev.When())
 
 	d.total = len(d.Lines)
 

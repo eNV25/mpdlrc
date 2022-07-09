@@ -7,26 +7,22 @@ import (
 )
 
 var (
-	_ tcell.Event = event{}
-	_ tcell.Event = &event{}
+	_ tcell.Event = Event{}
+	_ tcell.Event = &Event{}
 )
 
-type event time.Time
+type Event time.Time
 
-func (ev event) When() time.Time { return time.Time(ev) }
+func (ev *Event) Init()          { *ev = Event(time.Now()) }
+func (ev Event) When() time.Time { return time.Time(ev) }
 
-type (
-	Draw     struct{ event }
-	Ping     struct{ event }
-	Player   struct{ event }
-	Function struct {
-		event
-		Func func()
-	}
-)
+type Func struct {
+	Event
+	Func func()
+}
 
-func newEvent() event                   { return event(time.Now()) }
-func NewDraw() tcell.Event              { return &Draw{newEvent()} }
-func NewPing() tcell.Event              { return &Ping{newEvent()} }
-func NewPlayer() tcell.Event            { return &Player{newEvent()} }
-func NewFunction(fn func()) tcell.Event { return &Function{newEvent(), fn} }
+func NewFunction(fn func()) tcell.Event {
+	ev := &Func{Func: fn}
+	ev.Init()
+	return ev
+}

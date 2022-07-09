@@ -11,8 +11,7 @@ type Widget interface {
 	View() views.View
 	SetView(view views.View)
 	Size() (x int, y int)
-	Resize()
-	Update(ctx context.Context)
+	Update(ctx context.Context, ev tcell.Event)
 }
 
 type cellModel interface {

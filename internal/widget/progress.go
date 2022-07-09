@@ -5,8 +5,9 @@ import (
 	"sort"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
+
 	"github.com/env25/mpdlrc/internal/client"
-	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/styles"
@@ -32,8 +33,17 @@ func NewProgress() *Progress {
 	return ret
 }
 
-func (w *Progress) Update(ctx context.Context) {
+func (w *Progress) Update(ctx context.Context, ev tcell.Event) {
 	defer panics.Handle(ctx)
+
+	switch ev.(type) {
+	case *tcell.EventResize:
+		w.resize()
+	case *client.PlayerEvent:
+		// no-op
+	default:
+		return
+	}
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -48,7 +58,7 @@ func (w *Progress) Update(ctx context.Context) {
 		totalX:   vx,
 	}
 
-	d.Elapsed += time.Since(event.FromContext(ctx).When())
+	d.Elapsed += time.Since(ev.When())
 
 	d.Duration = d.Duration / time.Duration(vx)
 	d.elapsedX = sort.Search(d.totalX, func(i int) bool { return (time.Duration(i) * d.Duration) >= d.Elapsed })

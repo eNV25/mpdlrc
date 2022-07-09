@@ -14,7 +14,7 @@ func Post(ctx context.Context, newEvent func() tcell.Event) {
 	PostEvent(ctx, newEvent())
 }
 
-func PostEveryTick(ctx context.Context, newEvent func() tcell.Event, d time.Duration) {
+func PostFuncTicker(ctx context.Context, f func(), d time.Duration) {
 	defer panics.Handle(ctx)
 	ticker := time.NewTicker(d)
 	defer ticker.Stop()
@@ -23,7 +23,7 @@ func PostEveryTick(ctx context.Context, newEvent func() tcell.Event, d time.Dura
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			PostEvent(ctx, newEvent())
+			PostEvent(ctx, event.NewFunction(f))
 		}
 	}
 }

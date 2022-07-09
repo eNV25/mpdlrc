@@ -46,8 +46,19 @@ type statusData struct {
 	// Consume string
 }
 
-func (w *Status) Update(ctx context.Context) {
+func (w *Status) Update(ctx context.Context, ev tcell.Event) {
 	defer panics.Handle(ctx)
+
+	switch ev.(type) {
+	case *tcell.EventResize:
+		w.resize()
+	case *client.OptionsEvent:
+		// no-op
+	case *client.PlayerEvent:
+		// no-op
+	default:
+		return
+	}
 
 	w.mu.Lock()
 	defer w.mu.Unlock()

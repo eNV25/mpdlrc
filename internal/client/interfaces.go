@@ -14,11 +14,6 @@ type Client interface {
 	Play() error
 	Start() error
 	Stop() error
-}
-
-type Watcher interface {
-	Start() error
-	Stop() error
 	PostEvents(ctx context.Context)
 }
 
