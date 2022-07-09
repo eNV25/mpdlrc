@@ -28,8 +28,6 @@ func ParseString(text string) ([]Duration, []Text, error) {
 // ll    -> [00:00.00]
 // index -> 0123456789
 
-func dtoi(b byte) byte { return b - '0' }
-
 // Parse parses the reader according to the LRC format.
 // https://en.wikipedia.org/wiki/LRC_(file_format)
 func ParseReader(reader io.Reader) ([]Duration, []Text, error) {
@@ -48,9 +46,9 @@ func ParseReader(reader io.Reader) ([]Duration, []Text, error) {
 			'0' <= ll[7] && ll[7] <= '9' && '0' <= ll[8] && ll[8] <= '9' &&
 			ll[9] == ']' {
 			times = append(times, (0 +
-				Duration(10*dtoi(ll[1])+dtoi(ll[2]))*time.Minute +
-				Duration(10*dtoi(ll[4])+dtoi(ll[5]))*time.Second +
-				Duration(10*dtoi(ll[7])+dtoi(ll[8]))*time.Second/100))
+				Duration(10*(ll[1]-'0')+(ll[2])-'0')*time.Minute +
+				Duration(10*(ll[4]-'0')+(ll[5])-'0')*time.Second +
+				Duration(10*(ll[7]-'0')+(ll[8])-'0')*time.Second/100))
 			ll = ll[10:]
 			rp++
 		}
