@@ -2,6 +2,8 @@
 
 https://github.com/eNV25/mpdlrc/
 
+`mpdlrc` displays synchronized lyrics for the currently playing track. It uses the track's file path to find an `.lrc` file, e.g. `file.mp3 => file.lrc`. In the future, it may be extended to support synchronized lyrics embedded in the audio file.
+
 ## Install
 
 Installation requires a [go](http://golang.org/) compiler and the `go` tool.
