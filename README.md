@@ -41,3 +41,7 @@ MusicDir = "$HOME/Music"
 ```
 $ mpdlrc
 ```
+
+## Screenshot
+
+![screenshot.png](https://user-images.githubusercontent.com/61089994/178155519-89f2829c-9640-459b-8df0-1478354e26ab.png)
