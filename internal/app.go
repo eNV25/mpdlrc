@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 	"log"
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"time"
@@ -15,10 +14,7 @@ import (
 	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
-	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/panics"
-	"github.com/env25/mpdlrc/internal/ufilepath"
-	"github.com/env25/mpdlrc/internal/upath"
 	"github.com/env25/mpdlrc/internal/widget"
 )
 
@@ -36,9 +32,6 @@ type Application struct {
 	wprogress *widget.Progress
 	wlyrics   *widget.Lyrics
 	wstatus   *widget.Status
-
-	id     string
-	lyrics *lyrics.Lyrics
 }
 
 // NewApplication allocates new Application from cfg.
@@ -46,11 +39,9 @@ func NewApplication(cfg *config.Config) *Application {
 	app := &Application{
 		cfg:       cfg,
 		events:    make(chan tcell.Event),
-		client:    client.NewMPDClient(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password),
 		wprogress: widget.NewProgress(),
 		wlyrics:   widget.NewLyrics(),
 		wstatus:   widget.NewStatus(),
-		lyrics:    &lyrics.Lyrics{},
 	}
 
 	return app
@@ -58,23 +49,21 @@ func NewApplication(cfg *config.Config) *Application {
 
 func (app *Application) update(ctx context.Context, ev tcell.Event) {
 	if config.Debug {
-		log.Printf("event: %T", ev)
+		log.Printf("update: %T", ev)
 	}
-	var x, y int
 	switch ev := ev.(type) {
 	case *tcell.EventKey:
 		switch ev.Key() {
 		case tcell.KeyCtrlL:
-			x, y = app.Screen.Size()
-			goto resize
+			x, y := app.Screen.Size()
+			app.updateResize(ctx, ev, x, y)
 		case tcell.KeyCtrlC, tcell.KeyEscape:
-			goto quit
+			app.Quit()
 		case tcell.KeyRune:
 			switch ev.Rune() {
 			case 'q':
-				goto quit
+				app.Quit()
 			case ' ':
-				return
 			}
 		}
 	case *event.Func:
@@ -85,40 +74,21 @@ func (app *Application) update(ctx context.Context, ev tcell.Event) {
 			)
 		}
 		ev.Func()
-		return
 	case *tcell.EventResize:
 		// guaranteed to run at program start
-		x, y = ev.Size()
-		goto resize
+		x, y := ev.Size()
+		app.updateResize(ctx, ev, x, y)
 	case *client.PlayerEvent:
-		goto update
+		app.updateData(ctx, ev, ev.Data)
 	case *client.OptionsEvent:
-		goto update
+		app.updateData(ctx, ev, ev.Data)
 	}
-	return
-quit:
-	app.Quit()
-	return
-resize:
-	app.cancel()
-	app.Screen.Fill(' ', tcell.Style{})
-	app.Screen.Sync()
-	app.wprogress.View().Resize(0, 0, x, 3)
-	app.wlyrics.View().Resize(0, 3, x, y-6)
-	app.wstatus.View().Resize(0, y-3, x, 3)
-	goto update
-update:
+}
+
+func (app *Application) updateData(ctx context.Context, ev tcell.Event, data client.Data) {
 	app.cancel()
 
-	song, status, lrcs, err := app.data()
-	if err != nil {
-		log.Printf("%+v\n", err)
-		return
-	}
-
-	ctx = client.ContextWithSong(ctx, song)
-	ctx = client.ContextWithStatus(ctx, status)
-	ctx = lyrics.ContextWith(ctx, lrcs)
+	ctx = client.ContextWithData(ctx, data)
 	ctx, app.cancel = context.WithCancel(ctx)
 
 	go app.wprogress.Update(ctx, ev)
@@ -126,17 +96,19 @@ update:
 	go app.wstatus.Update(ctx, ev)
 }
 
-func (app *Application) data() (client.Song, client.Status, *lyrics.Lyrics, error) {
-	song, err := app.client.NowPlaying() // TODO
-	status, errr := app.client.Status()  // TODO
-	if err != nil || errr != nil {
-		return nil, nil, nil, multierr.Append(err, errr)
+func (app *Application) updateResize(ctx context.Context, ev tcell.Event, x, y int) {
+	app.cancel()
+	app.Screen.Fill(' ', tcell.Style{})
+	app.Screen.Sync()
+	app.wprogress.View().Resize(0, 0, x, 3)
+	app.wlyrics.View().Resize(0, 3, x, y-6)
+	app.wstatus.View().Resize(0, y-3, x, 3)
+	data, err := app.client.Data()
+	if err != nil {
+		log.Println("updateResize:", err)
+		return
 	}
-	if id := song.ID(); id != app.id {
-		file := filepath.Join(app.cfg.LyricsDir, ufilepath.FromSlash(upath.ReplaceExt(song.File(), ".lrc")))
-		app.lyrics = lyrics.New(file)
-	}
-	return song, status, app.lyrics, nil
+	app.updateData(ctx, ev, data)
 }
 
 // Quit the application.
@@ -157,16 +129,16 @@ func (app *Application) Run() (err error) {
 	}
 	defer app.Screen.Fini()
 
-	err = app.client.Start()
+	app.client, err = client.NewMPDClient(app.cfg)
 	if err != nil {
 		return
 	}
-	defer multierr.AppendInvoke(&err, multierr.Invoke(app.client.Stop))
+	defer multierr.AppendInvoke(&err, multierr.Invoke(app.client.Close))
 
 	defer app.Quit()
 
 	// Update config with data from MPD
-	app.cfg.FromClient(app.client)
+	app.cfg.FromClient(app.client.MusicDir())
 	if config.Debug {
 		log.Print("\n", app.cfg)
 	}

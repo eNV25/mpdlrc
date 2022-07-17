@@ -8,17 +8,18 @@ import (
 
 func Handle(ctx context.Context) {
 	r := recover()
-	if r != nil {
-		buf := make([]byte, 1024)
-		for {
-			n := runtime.Stack(buf, false)
-			if n < len(buf) {
-				buf = buf[:n]
-				break
-			}
-			buf = make([]byte, 2*len(buf))
-		}
-		log.Printf("\npanic: %v\n%s\n", r, buf)
-		RunHooksFromContext(ctx)
+	if r == nil {
+		return
 	}
+	buf := make([]byte, 1024)
+	for {
+		n := runtime.Stack(buf, false)
+		if n < len(buf) {
+			buf = buf[:n]
+			break
+		}
+		buf = make([]byte, 2*len(buf))
+	}
+	log.Printf("\npanic: %v\n%s\n", r, buf)
+	RunHooksFromContext(ctx)
 }

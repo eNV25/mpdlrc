@@ -1,4 +1,4 @@
-package upath
+package ufilepath
 
 import (
 	"reflect"

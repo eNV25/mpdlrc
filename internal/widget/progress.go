@@ -49,12 +49,12 @@ func (w *Progress) Update(ctx context.Context, ev tcell.Event) {
 	defer w.mu.Unlock()
 
 	vx, _ := w.Size()
-	status := client.StatusFromContext(ctx)
+	data := client.DataFromContext(ctx)
 
 	d := &progressData{
-		Playing:  status.State() == "play",
-		Elapsed:  status.Elapsed(),
-		Duration: status.Duration(),
+		Playing:  data.State() == "play",
+		Elapsed:  data.Elapsed(),
+		Duration: data.Duration(),
 		totalX:   vx,
 	}
 

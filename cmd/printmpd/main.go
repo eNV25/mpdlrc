@@ -3,12 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path"
-	"strconv"
 
 	"github.com/fhs/gompd/v2/mpd"
 	"github.com/spf13/pflag"
+
+	"github.com/env25/mpdlrc/internal/client"
+	"github.com/env25/mpdlrc/internal/config"
 )
 
 func check(err error) {
@@ -20,26 +20,27 @@ func check(err error) {
 func main() {
 	pflag.Parse()
 
-	c, err := mpd.DialAuthenticated("unix", path.Join("/run/user", strconv.Itoa(os.Geteuid()), "mpd/socket"), "")
+	cfg := config.DefaultConfig()
+	c, err := client.NewMPDClient(cfg)
 	check(err)
 	defer func() {
-		err = c.Close()
-		check(err)
+		check(c.Close())
 	}()
 
-	attrs, err := c.CurrentSong()
+	attrs, err := c.Data()
 	ret, errr := json.MarshalIndent(attrs, "", "  ")
 	fmt.Printf("%s %v %v\n", ret, err, errr)
 
-	attrs, err = c.Status()
-	ret, errr = json.MarshalIndent(attrs, "", "  ")
+	m, err := mpd.DialAuthenticated(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
+	check(err)
+	defer func() {
+		check(m.Close())
+	}()
+	mattrss, err := m.Command("listmounts").AttrsList("mount")
+	ret, errr = json.MarshalIndent(mattrss, "", "  ")
 	fmt.Printf("%s %v %v\n", ret, err, errr)
 
-	attrss, err := c.Command("listmounts").AttrsList("mount")
-	ret, errr = json.MarshalIndent(attrss, "", "  ")
-	fmt.Printf("%s %v %v\n", ret, err, errr)
-
-	attrs, err = c.Command("config").Attrs()
-	ret, errr = json.MarshalIndent(attrs, "", "  ")
+	mattrs, err := m.Command("config").Attrs()
+	ret, errr = json.MarshalIndent(mattrs, "", "  ")
 	fmt.Printf("%s %v %v\n", ret, err, errr)
 }

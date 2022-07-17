@@ -7,10 +7,9 @@ import (
 type key struct{}
 
 func ContextWithHook(ctx context.Context, h func()) context.Context {
-	v := ctx.Value(key{})
+	v := ctx.Value(key{}) // *[]func()
 	if v == nil {
-		var s []func()
-		v = &s
+		v = new([]func())
 		ctx = context.WithValue(ctx, key{}, v)
 	}
 	p := v.(*[]func())
@@ -20,9 +19,10 @@ func ContextWithHook(ctx context.Context, h func()) context.Context {
 
 func RunHooksFromContext(ctx context.Context) {
 	v := ctx.Value(key{})
-	if v != nil {
-		for _, f := range *v.(*[]func()) {
-			f()
-		}
+	if v == nil {
+		return
+	}
+	for _, f := range *v.(*[]func()) {
+		f()
 	}
 }

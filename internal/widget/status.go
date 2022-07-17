@@ -10,7 +10,6 @@ import (
 
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/events"
-	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/styles"
 	"github.com/env25/mpdlrc/internal/urunewidth"
@@ -31,9 +30,7 @@ func NewStatus() *Status {
 }
 
 type statusData struct {
-	Song   client.Song
-	Status client.Status
-	Lyrics *lyrics.Lyrics
+	client.Data
 	// Album string
 	// Artist string
 	// Title string
@@ -63,15 +60,9 @@ func (w *Status) Update(ctx context.Context, ev tcell.Event) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	song := client.SongFromContext(ctx)
-	status := client.StatusFromContext(ctx)
-	lyrics := lyrics.FromContext(ctx)
+	data := client.DataFromContext(ctx)
 
-	d := &statusData{
-		Song:   song,
-		Status: status,
-		Lyrics: lyrics,
-	}
+	d := &statusData{data}
 
 	go events.PostFunc(ctx, func() { w.draw(d) })
 }
@@ -101,7 +92,7 @@ func (w *Status) draw(d *statusData) {
 	}
 
 	{
-		state := d.Status.State()
+		state := d.State()
 		var status []byte
 		if state == "play" {
 			status = append(status, "[playing] "...)
@@ -110,7 +101,7 @@ func (w *Status) draw(d *statusData) {
 		} else if state == "stop" {
 			status = append(status, "[stopped] "...)
 		}
-		if len(d.Lyrics.Lines) == 0 {
+		if d.Lyrics == nil || len(d.Lines) == 0 {
 			status = append(status, "no lyrics "...)
 		}
 		for x, c := range status {
@@ -120,16 +111,16 @@ func (w *Status) draw(d *statusData) {
 
 	{
 		status := append([]byte{}, "[------]"...)
-		if d.Status.Repeat() {
+		if d.Repeat() {
 			status[1] = 'r'
 		}
-		if d.Status.Random() {
+		if d.Random() {
 			status[2] = 'x'
 		}
-		if d.Status.Single() {
+		if d.Single() {
 			status[3] = 's'
 		}
-		if d.Status.Consume() {
+		if d.Consume() {
 			status[4] = 'c'
 		}
 		for o, c := range status {
@@ -142,20 +133,20 @@ func (w *Status) draw(d *statusData) {
 		var title strings.Builder
 		var suf strings.Builder
 		pre.WriteString("  ")
-		if s := d.Song.Artist(); s != "" {
+		if s := d.Artist(); s != "" {
 			pre.WriteString(s)
 			pre.WriteString(" - ")
 		}
-		if s := d.Song.Title(); s != "" {
+		if s := d.Title(); s != "" {
 			title.WriteString(s)
 		} else {
 			title.WriteString(d.Song.File())
 		}
-		if s := d.Song.Album(); s != "" {
+		if s := d.Album(); s != "" {
 			suf.WriteString(" - ")
 			suf.WriteString(s)
 		}
-		if s := d.Song.Date(); s != "" {
+		if s := d.Date(); s != "" {
 			suf.WriteString(" (")
 			suf.WriteString(s)
 			suf.WriteString(")")

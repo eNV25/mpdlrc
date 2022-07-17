@@ -2,116 +2,175 @@ package client
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"os"
-	"runtime"
+	"path/filepath"
 	"strconv"
+	"sync/atomic"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
-	"go.uber.org/atomic"
+	uatomic "go.uber.org/atomic"
 	"go.uber.org/multierr"
 
+	"github.com/gdamore/tcell/v2"
+
+	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/internal/events"
+	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/panics"
+	"github.com/env25/mpdlrc/internal/ufilepath"
 )
 
+//go:generate go run generate.go
+
 type MPDClient struct {
-	closed atomic.Bool
+	closed uatomic.Bool
 
-	c *mpd_Client
-	w *mpd_Watcher
+	c   *mpd_Client
+	w   *mpd_Watcher
+	cfg *config.Config
 
-	net, addr, password string
+	id  atomic.Value // string
+	lrc *lyrics.Lyrics
 }
 
 var _ Client = &MPDClient{}
 
 // NewMPDClient returns a pointer to an instance of MPDClient.
 // A password of "" can be used if there is no password.
-func NewMPDClient(net, addr, password string) *MPDClient {
+func NewMPDClient(cfg *config.Config) (_ *MPDClient, err error) {
+	for _, cs := range &[...]struct{ net, addr string }{
+		{"unix", filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "mpd", "socket")},
+		{"unix", filepath.Join(string(filepath.Separator), "run", "mpd", "socket")},
+		{cfg.MPD.Connection, cfg.MPD.Address},
+	} {
+		c, err := mpd_DialAuthenticated(cs.net, cs.addr, cfg.MPD.Password)
+		if err != nil {
+			continue
+		}
+		cfg.MPD.Connection = cs.net
+		cfg.MPD.Address = cs.addr
+		return newMPDClient(c, cfg), nil
+	}
+	return nil, fmt.Errorf("NewMPDClient: %w", os.ErrNotExist)
+}
+
+func newMPDClient(c *mpd_Client, cfg *config.Config) *MPDClient {
+	w, _ := mpd_NewWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
 	return &MPDClient{
-		net:      net,
-		addr:     addr,
-		password: password,
+		c:   c,
+		w:   w,
+		cfg: cfg,
 	}
 }
 
-func (c *MPDClient) Start() (err error) {
-	c.c, err = mpd_DialAuthenticated(c.net, c.addr, c.password)
-	if err != nil {
-		return err
-	}
-	c.w, err = mpd_NewWatcher(c.net, c.addr, c.password)
-	if err != nil {
-		return err
-	}
-	runtime.SetFinalizer(c, func(c *MPDClient) { _ = c.Stop() })
-	return
-}
-
-func (c *MPDClient) Stop() (err error) {
+func (c *MPDClient) Close() (err error) {
+	goto normal
+err:
+	return fmt.Errorf("MPDClient: Close: %w", err)
+normal:
 	if !c.closed.CAS(false, true) {
-		return os.ErrClosed
+		err = os.ErrClosed
+		return
 	}
-	multierr.AppendInvoke(&err, multierr.Invoke(c.c.Close))
-	multierr.AppendInvoke(&err, multierr.Invoke(c.w.Close))
+	err = c.c.noIdle()
+	err = multierr.Append(err, c.c.Close())
+	if err != nil {
+		goto err
+	}
+	return nil
+}
+
+func (c *MPDClient) Ping() (err error) {
+	goto normal
+err:
+	return fmt.Errorf("MPDClient: Ping: %w", err)
+normal:
+	if c.closed.Load() {
+		err = os.ErrClosed
+		goto err
+	}
+	err = c.c.Ping()
+	if err != nil {
+		goto err
+	}
+	return nil
+}
+
+func (c *MPDClient) MusicDir() (_ string, err error) {
+	goto normal
+err:
+	err = fmt.Errorf("MPDClient: MusicDir: %w", err)
 	return
-}
-
-func (c *MPDClient) Pause() error {
+normal:
 	if c.closed.Load() {
-		return os.ErrClosed
-	}
-	return c.c.Pause(true)
-}
-
-func (c *MPDClient) Play() error {
-	if c.closed.Load() {
-		return os.ErrClosed
-	}
-	return c.c.Pause(false)
-}
-
-func (c *MPDClient) Ping() error {
-	if c.closed.Load() {
-		return os.ErrClosed
-	}
-	return c.c.Ping()
-}
-
-func (c *MPDClient) NowPlaying() (Song, error) {
-	if c.closed.Load() {
-		return nil, os.ErrClosed
-	}
-	attrs, err := c.c.CurrentSong()
-	return MPDSong(attrs), err
-}
-
-func (c *MPDClient) Status() (Status, error) {
-	if c.closed.Load() {
-		return nil, os.ErrClosed
-	}
-	attrs, err := c.c.Status()
-	return MPDStatus(attrs), err
-}
-
-func (c *MPDClient) MusicDir() (string, error) {
-	if c.closed.Load() {
-		return "", os.ErrClosed
+		err = os.ErrClosed
+		goto err
 	}
 	attrs, err := c.c.Command("config").Attrs()
-	return attrs["music_directory"], err
+	if err != nil {
+		goto err
+	}
+	return attrs["music_directory"], nil
+}
+
+func (c *MPDClient) Data() (data Data, err error) {
+	goto start
+err:
+	err = fmt.Errorf("MPDClient: Data: %w", err)
+	return
+start:
+	if c.closed.Load() {
+		err = os.ErrClosed
+		goto err
+	}
+
+	cmdlist := c.c.BeginCommandList()
+	songFuture := cmdlist.CurrentSong()
+	statusFuture := cmdlist.Status()
+	err = cmdlist.End()
+	if err != nil {
+		goto err
+	}
+
+	song, songErr := songFuture.Value()
+	status, statusErr := statusFuture.Value()
+	err = multierr.Append(songErr, statusErr)
+	if err != nil {
+		goto err
+	}
+
+	{
+		song := MPDSong(song)
+		status := MPDStatus(status)
+		return Data{
+			Song:   song,
+			Status: status,
+			Lyrics: c.lyrics(song),
+		}, nil
+	}
+}
+
+func (c *MPDClient) lyrics(song Song) *lyrics.Lyrics {
+	id := song.ID()
+	// if id != c.id {
+	//	c.id = id
+	old := c.id.Swap(id)
+	if id != old {
+		c.lrc = lyrics.ForFile(filepath.Join(c.cfg.LyricsDir, ufilepath.FromSlash(song.File())))
+	}
+	return c.lrc
 }
 
 func (c *MPDClient) PostEvents(ctx context.Context) {
 	defer panics.Handle(ctx)
-	var newEvent func() tcell.Event
+
+	var newEvent func(Data) tcell.Event
 	for {
 		select {
-		case <-ctx.Done():
-			return
-		case <-c.w.Error:
-			// no-op
+		case err := <-c.w.Error:
+			log.Println("MPDClient: PostEvents:", err)
 		case mpdev := <-c.w.Event:
 			switch mpdev {
 			case "player":
@@ -120,7 +179,10 @@ func (c *MPDClient) PostEvents(ctx context.Context) {
 				newEvent = newOptionsEvent
 			}
 			if newEvent != nil {
-				events.PostEvent(ctx, newEvent())
+				data, err := c.Data()
+				if err == nil {
+					events.PostEvent(ctx, newEvent(data))
+				}
 				newEvent = nil
 			}
 		}
@@ -143,14 +205,14 @@ type MPDStatus map[string]string
 var _ Status = MPDStatus{}
 
 func (s MPDStatus) State() string           { return s["state"] }
-func (s MPDStatus) Duration() time.Duration { return s.timeDuration("duration") }
-func (s MPDStatus) Elapsed() time.Duration  { return s.timeDuration("elapsed") }
+func (s MPDStatus) Duration() time.Duration { return s.timeDuration("duration", time.Second) }
+func (s MPDStatus) Elapsed() time.Duration  { return s.timeDuration("elapsed", time.Second) }
 func (s MPDStatus) Repeat() bool            { return s["repeat"] != "0" }
 func (s MPDStatus) Random() bool            { return s["random"] != "0" }
 func (s MPDStatus) Single() bool            { return s["single"] != "0" }
 func (s MPDStatus) Consume() bool           { return s["consume"] != "0" }
 
-func (s MPDStatus) timeDuration(key string) time.Duration {
+func (s MPDStatus) timeDuration(key string, unit time.Duration) time.Duration {
 	parsed, _ := strconv.ParseFloat(s[key], 64)
-	return time.Duration(parsed * float64(time.Second))
+	return time.Duration(parsed * float64(unit))
 }

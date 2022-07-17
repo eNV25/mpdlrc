@@ -10,7 +10,6 @@ import (
 
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/events"
-	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/styles"
 	"github.com/env25/mpdlrc/internal/timerpool"
@@ -56,20 +55,21 @@ func (w *Lyrics) Update(ctx context.Context, ev tcell.Event) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	status := client.StatusFromContext(ctx)
-	lyrics := lyrics.FromContext(ctx)
+	data := client.DataFromContext(ctx)
 
 	d := &lyricsData{
-		Playing: status.State() == "play",
-		Elapsed: status.Elapsed(),
-		Times:   lyrics.Times,
-		Lines:   lyrics.Lines,
+		Playing: data.State() == "play",
+		Elapsed: data.Elapsed() + time.Since(ev.When()),
+	}
+	if data.Lyrics == nil {
+		d.Times = []time.Duration{}
+		d.Lines = []string{}
+	} else {
+		d.Times = data.Times
+		d.Lines = data.Lines
 	}
 
-	d.Elapsed += time.Since(ev.When())
-
 	d.total = len(d.Lines)
-
 	// This index is the first line after the one to be displayed.
 	d.index = sort.Search(d.total, func(i int) bool { return d.Times[i] > d.Elapsed })
 

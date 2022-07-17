@@ -25,9 +25,6 @@ func ParseString(text string) ([]Duration, []Text, error) {
 	return ParseReader(strings.NewReader(text))
 }
 
-// ll    -> [00:00.00]
-// index -> 0123456789
-
 // Parse parses the reader according to the LRC format.
 // https://en.wikipedia.org/wiki/LRC_(file_format)
 func ParseReader(reader io.Reader) ([]Duration, []Text, error) {
@@ -37,19 +34,39 @@ func ParseReader(reader io.Reader) ([]Duration, []Text, error) {
 	// scnnr.Split(bufio.ScanLines)
 	for rp := 0; scnnr.Scan(); {
 		ll := scnnr.Text()
-		// [00:00.00][00:00.00]text -> [00:00.00]text -> text
-		for len(ll) >= 10 && ll[0] == '[' &&
-			'0' <= ll[1] && ll[1] <= '9' && '0' <= ll[2] && ll[2] <= '9' &&
-			ll[3] == ':' &&
-			'0' <= ll[4] && ll[4] <= '5' && '0' <= ll[5] && ll[5] <= '9' &&
-			ll[6] == '.' &&
-			'0' <= ll[7] && ll[7] <= '9' && '0' <= ll[8] && ll[8] <= '9' &&
-			ll[9] == ']' {
-			times = append(times, (0 +
-				Duration(10*(ll[1]-'0')+(ll[2])-'0')*time.Minute +
-				Duration(10*(ll[4]-'0')+(ll[5])-'0')*time.Second +
-				Duration(10*(ll[7]-'0')+(ll[8])-'0')*time.Second/100))
-			ll = ll[10:]
+	match: // [00:00.00][00:00.00]text -> [00:00.00]text -> text
+		for {
+			switch {
+			case len(ll) >= 10 &&
+				ll[0] == '[' &&
+				'0' <= ll[1] && ll[1] <= '9' && '0' <= ll[2] && ll[2] <= '9' &&
+				ll[3] == ':' &&
+				'0' <= ll[4] && ll[4] <= '5' && '0' <= ll[5] && ll[5] <= '9' &&
+				ll[6] == '.' &&
+				'0' <= ll[7] && ll[7] <= '9' && '0' <= ll[8] && ll[8] <= '9' &&
+				ll[9] == ']':
+				// ll    -> [00:00.00]
+				// index -> 0123456789
+				times = append(times, (0 +
+					Duration(10*(ll[1]-'0')+(ll[2])-'0')*time.Minute +
+					Duration(10*(ll[4]-'0')+(ll[5])-'0')*time.Second +
+					Duration(10*(ll[7]-'0')+(ll[8])-'0')*time.Second/100))
+				ll = ll[10:]
+			case len(ll) >= 7 &&
+				ll[0] == '[' &&
+				'0' <= ll[1] && ll[1] <= '9' && '0' <= ll[2] && ll[2] <= '9' &&
+				ll[3] == ':' &&
+				'0' <= ll[4] && ll[4] <= '5' && '0' <= ll[5] && ll[5] <= '9' &&
+				ll[6] == ']':
+				// ll    -> [00:00]
+				// index -> 0123456
+				times = append(times, (0 +
+					Duration(10*(ll[1]-'0')+(ll[2])-'0')*time.Minute +
+					Duration(10*(ll[4]-'0')+(ll[5])-'0')*time.Second))
+				ll = ll[7:]
+			default:
+				break match
+			}
 			rp++
 		}
 		for ; rp > 0; rp-- {

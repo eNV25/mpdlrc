@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
-
-	"github.com/env25/mpdlrc/internal/client"
 )
 
 var _ fmt.Stringer = (*Config)(nil)
@@ -32,9 +30,15 @@ func DefaultConfig() (cfg *Config) {
 	host := os.Getenv("MPD_HOST")
 	port := os.Getenv("MPD_PORT")
 	if host == "" {
-		cfg.MPD.Connection = "tcp"
-		cfg.MPD.Address = "localhost:6600"
-		cfg.MPD.Password = ""
+		if port == "" {
+			cfg.MPD.Connection = "tcp"
+			cfg.MPD.Address = "localhost:6600"
+			cfg.MPD.Password = ""
+		} else {
+			cfg.MPD.Connection = "tcp"
+			cfg.MPD.Address = "localhost:" + port
+			cfg.MPD.Password = ""
+		}
 	} else {
 		// If @ is found in host, it has two possible meanings.
 		// @path          : At the beginning, this is a Linux abstract socket path.
@@ -66,11 +70,11 @@ func (cfg *Config) String() string {
 	return b.String()
 }
 
-func (cfg *Config) FromClient(client client.Client) {
+func (cfg *Config) FromClient(musicDir string, err error) {
+	// Don't use client here to avoid import cycle
 	if cfg.LyricsDir != "" {
 		return
 	}
-	musicDir, err := client.MusicDir()
 	if err != nil {
 		cfg.LyricsDir = cfg.MusicDir
 		return

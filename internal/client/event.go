@@ -6,22 +6,25 @@ import (
 	"github.com/env25/mpdlrc/internal/event"
 )
 
-type PlayerEvent struct {
+type _event struct {
 	event.Event
+	Data
 }
 
-func newPlayerEvent() tcell.Event {
+type PlayerEvent struct{ _event }
+
+func newPlayerEvent(data Data) tcell.Event {
 	ev := new(PlayerEvent)
 	ev.Init()
+	ev.Data = data
 	return ev
 }
 
-type OptionsEvent struct {
-	event.Event
-}
+type OptionsEvent struct{ _event }
 
-func newOptionsEvent() tcell.Event {
+func newOptionsEvent(data Data) tcell.Event {
 	ev := new(OptionsEvent)
 	ev.Init()
+	ev.Data = data
 	return ev
 }

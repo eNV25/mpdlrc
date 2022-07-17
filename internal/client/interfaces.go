@@ -3,18 +3,21 @@ package client
 import (
 	"context"
 	"time"
+
+	"github.com/env25/mpdlrc/internal/lyrics"
 )
 
 type Client interface {
-	NowPlaying() (Song, error)
-	Status() (Status, error)
 	MusicDir() (string, error)
-	Ping() error
-	Pause() error
-	Play() error
-	Start() error
-	Stop() error
+	Data() (Data, error)
+	Close() error
 	PostEvents(ctx context.Context)
+}
+
+type Data struct {
+	Song
+	Status
+	*lyrics.Lyrics
 }
 
 type Song interface {
