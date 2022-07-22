@@ -67,10 +67,18 @@ func TestParseString(t *testing.T) {
 	}
 }
 
+var (
+	benchmarkParseStringTimes []time.Duration
+	benchmarkParseStringLines []string
+	benchmarkParseStringError error
+)
+
 func BenchmarkParseString(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for x := 0; x < b.N; x++ {
 		for i := range tests {
-			_, _, _ = ParseString(tests[i].lrc)
+			benchmarkParseStringTimes,
+				benchmarkParseStringLines,
+				benchmarkParseStringError = ParseString(tests[i].lrc)
 		}
 	}
 }
