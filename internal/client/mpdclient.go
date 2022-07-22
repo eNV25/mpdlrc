@@ -166,12 +166,12 @@ func (c *MPDClient) lyrics(song Song) *lyrics.Lyrics {
 func (c *MPDClient) PostEvents(ctx context.Context) {
 	defer panics.Handle(ctx)
 
-	var newEvent func(Data) tcell.Event
 	for {
 		select {
 		case err := <-c.w.Error:
 			log.Println("MPDClient: PostEvents:", err)
 		case mpdev := <-c.w.Event:
+			var newEvent func(Data) tcell.Event
 			switch mpdev {
 			case "player":
 				newEvent = newPlayerEvent
@@ -183,7 +183,6 @@ func (c *MPDClient) PostEvents(ctx context.Context) {
 				if err == nil {
 					events.PostEvent(ctx, newEvent(data))
 				}
-				newEvent = nil
 			}
 		}
 	}

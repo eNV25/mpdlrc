@@ -38,12 +38,14 @@ func (l *Lyrics) Swap(i, j int) {
 
 // Sort sorts lines in ascending order.
 func (l *Lyrics) Sort() {
+	l.check()
 	sort.Sort(l)
 }
 
 // Search return the first index greater with time than x.
 // The return value minus one is the last index less than or equal to x.
 func (l *Lyrics) Search(x time.Duration) int {
+	l.check()
 	return sort.Search(l.Len(), func(i int) bool {
 		return l.Times[i] > x
 	})
