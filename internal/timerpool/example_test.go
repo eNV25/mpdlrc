@@ -1,10 +1,12 @@
-package timerpool
+package timerpool_test
 
 import (
 	"context"
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/env25/mpdlrc/internal/timerpool"
 )
 
 func Example() {
@@ -14,16 +16,16 @@ func Example() {
 
 	wg.Add(2)
 
-	timer1 := Get(time.Second)
+	timer1 := timerpool.Get(time.Second)
 	go func() {
 		defer wg.Done()
 
 		select {
 		case <-ctx1.Done():
-			Put(timer1, false)
+			timerpool.Put(timer1, false)
 			return
 		case <-timer1.C:
-			Put(timer1, true)
+			timerpool.Put(timer1, true)
 		}
 
 		fmt.Println("1")
@@ -31,16 +33,16 @@ func Example() {
 
 	ctx2, cancel2 := context.WithCancel(ctx1)
 
-	timer2 := Get(time.Second)
+	timer2 := timerpool.Get(time.Second)
 	go func() {
 		defer wg.Done()
 
 		select {
 		case <-ctx2.Done():
-			Put(timer2, false)
+			timerpool.Put(timer2, false)
 			return
 		case <-timer2.C:
-			Put(timer2, true)
+			timerpool.Put(timer2, true)
 		}
 
 		fmt.Println("2")
