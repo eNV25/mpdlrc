@@ -16,6 +16,9 @@ run-debug:
 test:
 	go test -v ./...
 
+generate:
+	go generate -v ./...
+
 fmt:
 	go mod tidy
 	go fix ./...

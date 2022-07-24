@@ -10,8 +10,8 @@ import (
 	"github.com/env25/mpdlrc/internal/panics"
 )
 
-func Post(ctx context.Context, newEvent func() tcell.Event) {
-	PostEvent(ctx, newEvent())
+func Post(ctx context.Context, newEvent func() tcell.Event) bool {
+	return PostEvent(ctx, newEvent())
 }
 
 func PostFuncTicker(ctx context.Context, f func(), d time.Duration) {
@@ -23,22 +23,25 @@ func PostFuncTicker(ctx context.Context, f func(), d time.Duration) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			PostEvent(ctx, event.NewFunction(f))
+			if !PostEvent(ctx, event.NewFunction(f)) {
+				return
+			}
 		}
 	}
 }
 
-func PostEvent(ctx context.Context, ev tcell.Event) {
+func PostEvent(ctx context.Context, ev tcell.Event) bool {
 	defer panics.Handle(ctx)
 	events := FromContext(ctx)
 	defer func() { _ = recover() }()
 	select {
 	case <-ctx.Done():
-		return
+		return false
 	case events <- ev:
 	}
+	return true
 }
 
-func PostFunc(ctx context.Context, f func()) {
-	PostEvent(ctx, event.NewFunction(f))
+func PostFunc(ctx context.Context, f func()) bool {
+	return PostEvent(ctx, event.NewFunction(f))
 }

@@ -2,19 +2,19 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync/atomic"
+	"sync"
 	"time"
 
-	uatomic "go.uber.org/atomic"
 	"go.uber.org/multierr"
 
 	"github.com/gdamore/tcell/v2"
 
+	"github.com/env25/mpdlrc/internal/atomic"
 	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/lyrics"
@@ -25,10 +25,13 @@ import (
 //go:generate go run generate.go
 
 type MPDClient struct {
-	closed uatomic.Bool
+	mu     sync.Mutex
+	closed atomic.Bool
+	idling atomic.Bool
+	locked atomic.Bool
+	cond   sync.Cond
 
 	c   *mpd_Client
-	w   *mpd_Watcher
 	cfg *config.Config
 
 	id  atomic.Value // string
@@ -57,32 +60,17 @@ func NewMPDClient(cfg *config.Config) (_ *MPDClient, err error) {
 }
 
 func newMPDClient(c *mpd_Client, cfg *config.Config) *MPDClient {
-	w, _ := mpd_NewWatcher(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
-	return &MPDClient{
+	ret := &MPDClient{
 		c:   c,
-		w:   w,
 		cfg: cfg,
 	}
-}
-
-func (c *MPDClient) Close() (err error) {
-	goto normal
-err:
-	return fmt.Errorf("MPDClient: Close: %w", err)
-normal:
-	if !c.closed.CAS(false, true) {
-		err = os.ErrClosed
-		return
-	}
-	err = c.c.noIdle()
-	err = multierr.Append(err, c.c.Close())
-	if err != nil {
-		goto err
-	}
-	return nil
+	ret.cond.L = &ret.mu
+	return ret
 }
 
 func (c *MPDClient) Ping() (err error) {
+	c.lock()
+	defer c.unlock()
 	goto normal
 err:
 	return fmt.Errorf("MPDClient: Ping: %w", err)
@@ -99,6 +87,8 @@ normal:
 }
 
 func (c *MPDClient) MusicDir() (_ string, err error) {
+	c.lock()
+	defer c.unlock()
 	goto normal
 err:
 	err = fmt.Errorf("MPDClient: MusicDir: %w", err)
@@ -116,6 +106,8 @@ normal:
 }
 
 func (c *MPDClient) Data() (data Data, err error) {
+	c.lock()
+	defer c.unlock()
 	goto start
 err:
 	err = fmt.Errorf("MPDClient: Data: %w", err)
@@ -129,6 +121,7 @@ start:
 	cmdlist := c.c.BeginCommandList()
 	songFuture := cmdlist.CurrentSong()
 	statusFuture := cmdlist.Status()
+
 	err = cmdlist.End()
 	if err != nil {
 		goto err
@@ -154,8 +147,6 @@ start:
 
 func (c *MPDClient) lyrics(song Song) *lyrics.Lyrics {
 	id := song.ID()
-	// if id != c.id {
-	//	c.id = id
 	old := c.id.Swap(id)
 	if id != old {
 		c.lrc = lyrics.ForFile(filepath.Join(c.cfg.LyricsDir, ufilepath.FromSlash(song.File())))
@@ -163,29 +154,107 @@ func (c *MPDClient) lyrics(song Song) *lyrics.Lyrics {
 	return c.lrc
 }
 
+func (c *MPDClient) idle() ([]string, error) {
+	c.idling.Store(true)
+	mpdevs, err := c.c.idle()
+	c.idling.Store(false)
+	return mpdevs, err
+}
+
+func (c *MPDClient) noIdle() error {
+	if !c.idling.Load() {
+		return nil
+	}
+	return c.c.noIdle()
+}
+
+func (c *MPDClient) lock() {
+	if !c.locked.CompareAndSwap(false, true) {
+		return
+	}
+	_ = c.noIdle()
+	c.mu.Lock()
+}
+
+func (c *MPDClient) unlock() {
+	if !c.locked.CompareAndSwap(true, false) {
+		return
+	}
+	c.cond.Broadcast()
+	c.mu.Unlock()
+}
+
 func (c *MPDClient) PostEvents(ctx context.Context) {
 	defer panics.Handle(ctx)
 
 	for {
+		c.mu.Lock()
+
+		mpdevs, err := c.idle()
+
+		for c.locked.Load() && !c.closed.Load() {
+			c.cond.Wait()
+		}
+
+		c.mu.Unlock()
+
+		if c.closed.Load() {
+			return
+		}
+		if err != nil {
+			continue
+		}
 		select {
-		case err := <-c.w.Error:
-			log.Println("MPDClient: PostEvents:", err)
-		case mpdev := <-c.w.Event:
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		for _, mpdev := range mpdevs {
 			var newEvent func(Data) tcell.Event
+
 			switch mpdev {
 			case "player":
 				newEvent = newPlayerEvent
 			case "options":
 				newEvent = newOptionsEvent
+			default:
+				continue
 			}
-			if newEvent != nil {
-				data, err := c.Data()
-				if err == nil {
-					events.PostEvent(ctx, newEvent(data))
+
+			data, err := c.Data()
+			if err != nil {
+				if errors.Is(err, os.ErrClosed) {
+					return
 				}
+				continue
+			}
+
+			if !events.PostEvent(ctx, newEvent(data)) {
+				return
 			}
 		}
 	}
+}
+
+func (c *MPDClient) Close() (err error) {
+	if !c.closed.CompareAndSwap(false, true) {
+		err = os.ErrClosed
+		return
+	}
+	err = c.noIdle()
+	c.mu.Lock()
+	c.cond.Broadcast()
+	defer c.mu.Unlock()
+	goto normal
+err:
+	return fmt.Errorf("MPDClient: Close: %w", err)
+normal:
+	err = multierr.Append(err, c.c.Close())
+	if err != nil {
+		goto err
+	}
+	return nil
 }
 
 type MPDSong map[string]string
