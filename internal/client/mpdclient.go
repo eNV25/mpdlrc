@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/multierr"
-
+	_ "github.com/env25/gompd/v2/mpd" // for mpd_bundle.go
 	"github.com/gdamore/tcell/v2"
+	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal/atomic"
 	"github.com/env25/mpdlrc/internal/config"
@@ -21,8 +21,6 @@ import (
 	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/ufilepath"
 )
-
-//go:generate go run generate.go
 
 type MPDClient struct {
 	mu     sync.Mutex

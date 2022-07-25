@@ -12,8 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-
-	_ "go.uber.org/atomic"
 )
 
 //go:generate git clone -b my --depth 1 --single-branch https://github.com/eNV25/atomic.git

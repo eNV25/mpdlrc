@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/fhs/gompd/v2/mpd"
+	"github.com/env25/gompd/v2/mpd"
 	"github.com/spf13/pflag"
 
 	"github.com/env25/mpdlrc/internal/client"
