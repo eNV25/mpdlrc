@@ -5,7 +5,6 @@ import (
 	"log"
 	"reflect"
 	"runtime"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"go.uber.org/multierr"
@@ -153,7 +152,6 @@ func (app *Application) Run() (err error) {
 
 	go app.Screen.ChannelEvents(app.events, ctx.Done())
 	go app.client.PostEvents(ctx)
-	go events.PostFuncTicker(ctx, func() { _ = app.client.Ping() }, 5*time.Second)
 
 	app.wprogress.SetView(app.Screen)
 	app.wlyrics.SetView(app.Screen)
