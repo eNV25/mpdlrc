@@ -22,7 +22,7 @@ func main() {
 		fpath = pflag.Arg(0)
 	}
 
-	if err := (error)(nil); fpath == "" {
+	if err := error(nil); fpath == "" {
 		f = os.Stdin
 	} else {
 		f, err = os.Open(fpath)

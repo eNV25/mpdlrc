@@ -40,7 +40,7 @@ var _ Client = &MPDClient{}
 
 // NewMPDClient returns a pointer to an instance of MPDClient.
 // A password of "" can be used if there is no password.
-func NewMPDClient(cfg *config.Config) (_ *MPDClient, err error) {
+func NewMPDClient(cfg *config.Config) (*MPDClient, error) {
 	for _, cs := range &[...]struct{ net, addr string }{
 		{"unix", filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "mpd", "socket")},
 		{"unix", filepath.Join(string(filepath.Separator), "run", "mpd", "socket")},

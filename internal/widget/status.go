@@ -24,11 +24,6 @@ type Status struct {
 	common
 }
 
-func NewStatus() *Status {
-	ret := &Status{}
-	return ret
-}
-
 type statusData struct {
 	client.Data
 	// Album string
@@ -152,7 +147,7 @@ func (w *Status) draw(d *statusData) {
 			suf.WriteString(")")
 		}
 		suf.WriteString("  ")
-		x := ((vx - runewidth.StringWidth(title.String())) / 2) - runewidth.StringWidth(pre.String())
+		x := (vx-runewidth.StringWidth(title.String()))/2 - runewidth.StringWidth(pre.String())
 		for _, c := range &[...]*struct {
 			c string
 			s tcell.Style

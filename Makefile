@@ -1,34 +1,35 @@
 
 go.module != go list -m
 
-build:
+build: .phony
 	go build -v -o ./bin/ ./...
 
-debug:
-	go build -v -tags=debug -o ./bin/ ./...
-
-run:
+run: .phony
 	go run -v .
 
-run-debug:
+debug: .phony
 	go run -v -tags=debug .
 
-test:
+test: .phony
 	go test -v ./...
 
-generate:
+gen: generate fmt .phony
+
+generate: .phony
 	go generate -v ./...
 
-fmt:
+fmt: .phony
 	go mod tidy
 	go fix ./...
 	go fmt ./...
-	gofmt -s -w -l .
+	gofmt -r '(x) -> x' -s -w -l .
 	goimports -local '${go.module}' -w -l .
 	gofumpt -w -l .
 
-checkfmt:
-	! [ "$$(gofmt -s -l . | wc -l)" -gt 0 ]
+checkfmt: .phony
+	! [ "$$(gofmt -r '(x) -> x' -s -l . | wc -l)" -gt 0 ]
 	! [ "$$(goimports -local '${go.module}' -l . | wc -l)" -gt 0 ]
 	! [ "$$(gofumpt -l . | wc -l)" -gt 0 ]
 
+.PHONY: .phony
+.phony:

@@ -28,21 +28,17 @@ type Application struct {
 	cfg    *config.Config
 	client *client.MPDClient
 
-	wprogress *widget.Progress
-	wlyrics   *widget.Lyrics
-	wstatus   *widget.Status
+	wprogress widget.Progress
+	wlyrics   widget.Lyrics
+	wstatus   widget.Status
 }
 
 // NewApplication allocates new Application from cfg.
 func NewApplication(cfg *config.Config) *Application {
 	app := &Application{
-		cfg:       cfg,
-		events:    make(chan tcell.Event),
-		wprogress: widget.NewProgress(),
-		wlyrics:   widget.NewLyrics(),
-		wstatus:   widget.NewStatus(),
+		cfg:    cfg,
+		events: make(chan tcell.Event),
 	}
-
 	return app
 }
 

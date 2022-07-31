@@ -1094,7 +1094,7 @@ func (pi *mpd_PromisedID) Value() (int, error) {
 	if *pi == -1 {
 		return -1, errors.New("value has not been computed yet")
 	}
-	return (int)(*pi), nil
+	return int(*pi), nil
 }
 
 // BeginCommandList creates a new CommandList structure using
@@ -1437,7 +1437,7 @@ func (cl *mpd_CommandList) End() error {
 			if ridErr != nil {
 				return ridErr
 			}
-			*(e.Value.(*mpd_command).promise.(*mpd_PromisedID)) = mpd_PromisedID(rid)
+			*e.Value.(*mpd_command).promise.(*mpd_PromisedID) = mpd_PromisedID(rid)
 
 		}
 	}

@@ -21,8 +21,6 @@ var _ Widget = &Lyrics{}
 // LyricsWidget is a Widget implementation.
 type Lyrics struct {
 	common
-
-	//*WidgetLyricsData /* not needed */
 }
 
 type lyricsData struct {
@@ -32,12 +30,6 @@ type lyricsData struct {
 	Elapsed time.Duration
 	index   int
 	total   int
-}
-
-// NewLyrics allocates new LyricsWidget.
-func NewLyrics() *Lyrics {
-	w := &Lyrics{}
-	return w
 }
 
 func (w *Lyrics) Update(ctx context.Context, ev tcell.Event) {

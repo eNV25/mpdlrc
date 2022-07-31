@@ -28,11 +28,6 @@ type progressData struct {
 	totalX   int
 }
 
-func NewProgress() *Progress {
-	ret := &Progress{}
-	return ret
-}
-
 func (w *Progress) Update(ctx context.Context, ev tcell.Event) {
 	defer panics.Handle(ctx)
 
@@ -61,7 +56,7 @@ func (w *Progress) Update(ctx context.Context, ev tcell.Event) {
 	d.Elapsed += time.Since(ev.When())
 
 	d.Duration = d.Duration / time.Duration(vx)
-	d.elapsedX = sort.Search(d.totalX, func(i int) bool { return (time.Duration(i) * d.Duration) >= d.Elapsed })
+	d.elapsedX = sort.Search(d.totalX, func(i int) bool { return time.Duration(i)*d.Duration >= d.Elapsed })
 
 	w.update(ctx, d)
 }
