@@ -1,10 +1,6 @@
 module github.com/env25/mpdlrc
 
-go 1.17
-
-// use until commit tagged
-// https://github.com/uber-go/atomic/commit/d4bbbc828dd5bdb865c6c0effe4178f7ef505eb0
-require go.uber.org/atomic v1.9.1-0.20220806181219-d4bbbc828dd5
+go 1.19
 
 // use fork until PR merged
 // https://github.com/fhs/gompd/pull/72
@@ -24,6 +20,7 @@ require (
 	github.com/fhs/gompd/v2 v2.2.0 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/sys v0.0.0-20220318055525-2edf467146b5 // indirect
 	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
 	golang.org/x/text v0.3.7 // indirect
