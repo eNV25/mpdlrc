@@ -55,13 +55,13 @@ func (f *Float32) CAS(old, new float32) (swapped bool) {
 // but CompareAndSwap allows a stored NaN to compare equal to a passed in NaN.
 // This avoids typical CompareAndSwap loops from blocking forever, e.g.,
 //
-//   for {
-//     old := atom.Load()
-//     new = f(old)
-//     if atom.CompareAndSwap(old, new) {
-//       break
-//     }
-//   }
+//	for {
+//	  old := atom.Load()
+//	  new = f(old)
+//	  if atom.CompareAndSwap(old, new) {
+//	    break
+//	  }
+//	}
 //
 // If CompareAndSwap did not match NaN to match, then the above would loop forever.
 func (f *Float32) CompareAndSwap(old, new float32) (swapped bool) {
