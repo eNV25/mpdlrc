@@ -5,8 +5,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
-
-	"github.com/env25/mpdlrc/internal/ustrings"
 )
 
 func ConfigDir(usr string) string {
@@ -38,9 +36,9 @@ func HomeDir(usr string) (h string) {
 
 func ExpandTilde(str string) string {
 	if strings.HasPrefix(str, "~") {
-		u, p, sep := ustrings.Cut(str[1:], string(os.PathSeparator))
+		u, p, sep := strings.Cut(str[1:], string(os.PathSeparator))
 		if os.PathSeparator != '/' && !sep {
-			u, p, sep = ustrings.Cut(str[1:], string('/'))
+			u, p, sep = strings.Cut(str[1:], string('/'))
 		}
 		if sep {
 			// ~/path or ~user/path
