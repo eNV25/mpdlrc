@@ -1,35 +1,46 @@
 
-go.module != go list -m
+# We use no GOFLAGS by default, regardless of host's environment variable.
+GOFLAGS :=
+
+go.module     != go list -m
+cmd.go        := GOFLAGS='${GOFLAGS}' go
+cmd.gofmt     := gofmt -r '(x) -> x' -s
+cmd.goimports := goimports -local '${go.module}'
+cmd.gofumpt   := gofumpt
 
 build: .phony
-	go build -v -o ./bin/ ./...
+	${cmd.go} build -v -o ./bin/ ./...
 
 run: .phony
-	go run -v .
+	${cmd.go} run -v .
 
 debug: .phony
-	go run -v -tags=debug .
+	${cmd.go} run -v -tags=debug .
 
 test: .phony
-	go test -v ./...
+	${cmd.go} test -v ./...
+
+generate: .phony
+	${cmd.go} generate -v ./...
+
+fmt: .phony
+	${cmd.go} mod tidy
+	${cmd.go} fix ./...
+	${cmd.go} fmt ./...
+	${cmd.gofmt} -w -l .
+	${cmd.goimports} -w -l .
+	${cmd.gofumpt} -w -l .
+
+checkfmt: .phony
+	! [ "$$(${cmd.gofmt} -l . | wc -l)" -gt 0 ]
+	! [ "$$(${cmd.goimports} -l . | wc -l)" -gt 0 ]
+	! [ "$$(${cmd.gofumpt} -l . | wc -l)" -gt 0 ]
 
 gen: generate fmt .phony
 
-generate: .phony
-	go generate -v ./...
-
-fmt: .phony
-	go mod tidy
-	go fix ./...
-	go fmt ./...
-	gofmt -r '(x) -> x' -s -w -l .
-	goimports -local '${go.module}' -w -l .
-	gofumpt -w -l .
-
-checkfmt: .phony
-	! [ "$$(gofmt -r '(x) -> x' -s -l . | wc -l)" -gt 0 ]
-	! [ "$$(goimports -local '${go.module}' -l . | wc -l)" -gt 0 ]
-	! [ "$$(gofumpt -l . | wc -l)" -gt 0 ]
+tools:
+	go install -v golang.org/x/tools/cmd/goimports@latest
+	go install -v mvdan.cc/gofumpt@latest
 
 .PHONY: .phony
 .phony:
