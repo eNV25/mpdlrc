@@ -2,15 +2,6 @@ module github.com/env25/mpdlrc
 
 go 1.17
 
-require (
-	github.com/gdamore/tcell/v2 v2.5.1
-	github.com/mattn/go-runewidth v0.0.13
-	github.com/pelletier/go-toml/v2 v2.0.2
-	github.com/rivo/uniseg v0.2.0
-	github.com/spf13/pflag v1.0.5
-	go.uber.org/multierr v1.8.0
-)
-
 // use until commit tagged
 // https://github.com/uber-go/atomic/commit/d4bbbc828dd5bdb865c6c0effe4178f7ef505eb0
 require go.uber.org/atomic v1.9.1-0.20220806181219-d4bbbc828dd5
@@ -19,6 +10,15 @@ require go.uber.org/atomic v1.9.1-0.20220806181219-d4bbbc828dd5
 // https://github.com/fhs/gompd/pull/72
 // https://github.com/eNV25/gompd/tree/my
 require github.com/env25/gompd/v2 v2.2.1-0.20220711100057-a554ee3acd3d
+
+require (
+	github.com/gdamore/tcell/v2 v2.5.2
+	github.com/mattn/go-runewidth v0.0.13
+	github.com/pelletier/go-toml/v2 v2.0.2
+	github.com/rivo/uniseg v0.3.4
+	github.com/spf13/pflag v1.0.5
+	go.uber.org/multierr v1.8.0
+)
 
 require (
 	github.com/fhs/gompd/v2 v2.2.0 // indirect

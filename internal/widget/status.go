@@ -148,7 +148,7 @@ func (w *Status) draw(d *statusData) {
 		}
 		suf.WriteString("  ")
 		x := (vx-runewidth.StringWidth(title.String()))/2 - runewidth.StringWidth(pre.String())
-		for _, c := range &[...]*struct {
+		for _, cs := range &[...]*struct {
 			c string
 			s tcell.Style
 		}{
@@ -156,11 +156,11 @@ func (w *Status) draw(d *statusData) {
 			{title.String(), styles.Default().Bold(true)},
 			{suf.String(), styles.Default()},
 		} {
-			gr := uniseg.NewGraphemes(c.c)
-			for gr.Next() {
-				rs := gr.Runes()
+			for clstr, st := "", -1; len(cs.c) > 0; {
+				clstr, cs.c, _, st = uniseg.FirstGraphemeClusterInString(cs.c, st)
+				rs := []rune(clstr)
+				w.SetContent(x, 1, rs[0], rs[1:], cs.s)
 				x += urunewidth.GraphemeWidth(rs)
-				w.SetContent(x, 1, rs[0], rs[1:], c.s)
 			}
 		}
 	}

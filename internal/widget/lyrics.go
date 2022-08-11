@@ -141,13 +141,14 @@ func (w *Lyrics) model(d *lyricsData) *lyricsModel {
 		m.combcs[y] = make([][]rune, max)
 		m.widths[y] = make([]int, max)
 
-		gr := uniseg.NewGraphemes(d.Lines[i])
-
-		for wd := 0; gr.Next(); x += wd {
-			rs := gr.Runes()
-			wd = urunewidth.GraphemeWidth(rs)
+		l := d.Lines[i][:]
+		for c, st := "", -1; len(l) > 0; {
+			c, l, _, st = uniseg.FirstGraphemeClusterInString(l, st)
+			rs := []rune(c)
+			wd := urunewidth.GraphemeWidth(rs)
 			m.combcs[y][x] = rs
 			m.widths[y][x] = wd
+			x += wd
 		}
 
 		m.xwidth[y] = x
