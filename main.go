@@ -29,36 +29,32 @@ func main() {
 	}()
 
 	var (
-		args        = os.Args[1:]
-		cfg         = config.DefaultConfig()
-		configFiles = config.ConfigFiles()
-	)
-
-	flags_cfg := pflag.NewFlagSet(PROGNAME, pflag.ContinueOnError)
-	flags_cfg.SortFlags = false
-	flags_cfg.ParseErrorsWhitelist = pflag.ParseErrorsWhitelist{UnknownFlags: true}
-
-	flags_cfg.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override cfg.MusicDir`)
-	flags_cfg.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override cfg.LyricsDir`)
-	flags_cfg.StringVar(&cfg.MPD.Connection, `mpd-connection`, cfg.MPD.Connection, `override cfg.MPD.Connection ("unix" or "tcp")`)
-	flags_cfg.StringVar(&cfg.MPD.Address, `mpd-address`, cfg.MPD.Address, `override cfg.MPD.Address ("socket" or "host:port")`)
-	flags_cfg.StringVar(&cfg.MPD.Password, `mpd-password`, cfg.MPD.Password, `override cfg.MPD.Password`)
-
-	var (
+		cfg          = config.DefaultConfig()
+		configFiles  = config.ConfigFiles()
 		flag_dumpcfg = false
 		flag_usage   = false
 	)
 
 	flags := pflag.NewFlagSet(PROGNAME, pflag.ContinueOnError)
 	flags.SortFlags = false
-
 	flags.BoolVar(&flag_dumpcfg, `dump-config`, false, `dump final config`)
 	flags.BoolVarP(&flag_usage, `help`, `h`, false, `display this help and exit`)
 	flags.StringArrayVar(&configFiles, `config`, configFiles, `use config file`)
 
-	flags_cfg.VisitAll(func(f *pflag.Flag) {
+	cfg_flags := pflag.NewFlagSet(PROGNAME, pflag.ContinueOnError)
+	cfg_flags.SortFlags = false
+	cfg_flags.ParseErrorsWhitelist = pflag.ParseErrorsWhitelist{UnknownFlags: true}
+	cfg_flags.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override cfg.MusicDir`)
+	cfg_flags.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override cfg.LyricsDir`)
+	cfg_flags.StringVar(&cfg.MPD.Connection, `mpd-connection`, cfg.MPD.Connection, `override cfg.MPD.Connection ("unix" or "tcp")`)
+	cfg_flags.StringVar(&cfg.MPD.Address, `mpd-address`, cfg.MPD.Address, `override cfg.MPD.Address ("socket" or "host:port")`)
+	cfg_flags.StringVar(&cfg.MPD.Password, `mpd-password`, cfg.MPD.Password, `override cfg.MPD.Password`)
+
+	cfg_flags.VisitAll(func(f *pflag.Flag) {
 		flags.Var((*fakeValue)(f), f.Name, f.Usage)
 	})
+
+	args := os.Args[1:]
 
 	if err := flags.Parse(args); err != nil {
 		log.Println(err)
@@ -94,7 +90,7 @@ func main() {
 	}
 
 	// We parse config flags later, so it overrides config files.
-	_ = flags_cfg.Parse(args)
+	_ = cfg_flags.Parse(args)
 
 	cfg.Expand()
 
