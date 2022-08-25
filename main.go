@@ -63,8 +63,8 @@ func main() {
 	}
 
 	if flag_usage {
-		log.Println("Usage of " + PROGNAME + ":")
-		log.Print(flags.FlagUsages())
+		fmt.Println("Usage of " + PROGNAME + ":")
+		fmt.Print(flags.FlagUsages())
 		exitCode = 0
 		return
 	}

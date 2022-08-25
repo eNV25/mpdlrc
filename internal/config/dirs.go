@@ -35,6 +35,7 @@ func HomeDir(usr string) (h string) {
 }
 
 func ExpandTilde(str string) string {
+	str = filepath.FromSlash(str)
 	if strings.HasPrefix(str, "~") {
 		u, p, sep := strings.Cut(str[1:], string(os.PathSeparator))
 		if os.PathSeparator != '/' && !sep {

@@ -33,6 +33,13 @@ func TestExpandTilde(t *testing.T) {
 			{"~" + current.Username + s, HomeDir(current.Username) + s},
 			{"~" + current.Username + s + "file", HomeDir(current.Username) + s + "file"},
 		}...)
+	} else if runtime.GOOS == "windows" {
+		ts = append(ts, []*struct {
+			in  string
+			out string
+		}{
+			{"~/file\\", HomeDir("") + "\\file\\"},
+		}...)
 	}
 	for _, c := range ts {
 		out := ExpandTilde(c.in)

@@ -10,7 +10,7 @@ require github.com/env25/gompd/v2 v2.2.1-0.20220711100057-a554ee3acd3d
 require (
 	github.com/gdamore/tcell/v2 v2.5.2
 	github.com/mattn/go-runewidth v0.0.13
-	github.com/pelletier/go-toml/v2 v2.0.2
+	github.com/pelletier/go-toml/v2 v2.0.3
 	github.com/rivo/uniseg v0.3.4
 	github.com/spf13/pflag v1.0.5
 	go.uber.org/multierr v1.8.0

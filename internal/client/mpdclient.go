@@ -19,7 +19,6 @@ import (
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/panics"
-	"github.com/env25/mpdlrc/internal/ufilepath"
 )
 
 type MPDClient struct {
@@ -147,7 +146,7 @@ func (c *MPDClient) lyrics(song Song) *lyrics.Lyrics {
 	id := song.ID()
 	old := c.id.Swap(id)
 	if id != old {
-		c.lrc = lyrics.ForFile(filepath.Join(c.cfg.LyricsDir, ufilepath.FromSlash(song.File())))
+		c.lrc = lyrics.ForFile(filepath.Join(c.cfg.LyricsDir, filepath.FromSlash(song.File())))
 	}
 	return c.lrc
 }
