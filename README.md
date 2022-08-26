@@ -34,7 +34,7 @@ located in `${XDG_CONFIG_HOME:-$HOME/.config}/mpdlrc/config.toml`. More
 exhaustive documentation for the config file can be found in
 [docs/config-docs.toml](docs/config-docs.toml).
 
-Example file, after setting `MPD_HOST=${XDG_RUNTIME_DIR}/mpd/socket`:
+Example file, after setting `MPD_HOST=localhost` `MPD_PORT=6600`:
 
 ```toml
 MusicDir = "$HOME/Music"
