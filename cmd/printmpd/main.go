@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 
 	"github.com/env25/gompd/v2/mpd"
-	"github.com/spf13/pflag"
 
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
@@ -18,7 +18,7 @@ func check(err error) {
 }
 
 func main() {
-	pflag.Parse()
+	flag.Parse()
 
 	cfg := config.DefaultConfig()
 	c, err := client.NewMPDClient(cfg)

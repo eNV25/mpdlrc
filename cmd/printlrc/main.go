@@ -1,10 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
-
-	"github.com/spf13/pflag"
 
 	"github.com/env25/mpdlrc/lrc"
 )
@@ -12,14 +11,14 @@ import (
 func main() {
 	var fpath string
 
-	pflag.StringVar(&fpath, "file", "", "select file")
+	flag.StringVar(&fpath, "file", "", "select file")
 
-	pflag.Parse()
+	flag.Parse()
 
 	var f *os.File
 
-	if fpath == "" && pflag.Arg(0) != "" {
-		fpath = pflag.Arg(0)
+	if fpath == "" && flag.Arg(0) != "" {
+		fpath = flag.Arg(0)
 	}
 
 	if err := error(nil); fpath == "" {

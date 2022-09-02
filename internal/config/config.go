@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/docopt/docopt-go"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -83,13 +84,35 @@ func (cfg *Config) FromClient(musicDir string, err error) {
 	cfg.LyricsDir = musicDir
 }
 
+func (cfg *Config) FromOpts(opts docopt.Opts) {
+	cfgMusicDir, _ := opts["--musicdir"].(string)
+	cfgLyricsDir, _ := opts["--lyricsdir"].(string)
+	cfgMPDConnection, _ := opts["--mpd-connection"].(string)
+	cfgMPDAddress, _ := opts["--mpd-address"].(string)
+	cfgMPDPassword, _ := opts["--mpd-password"].(string)
+	for _, x := range &[...]*struct{ to, from *string }{
+		{&cfg.MusicDir, &cfgMusicDir},
+		{&cfg.LyricsDir, &cfgLyricsDir},
+		{&cfg.MPD.Connection, &cfgMPDConnection},
+		{&cfg.MPD.Address, &cfgMPDAddress},
+		{&cfg.MPD.Password, &cfgMPDPassword},
+	} {
+		if *x.from != "" {
+			*x.to = *x.from
+		}
+	}
+}
+
 // Expand expands tilde ("~") and variables ("$VAR" or "${VAR}") in paths in Config.
 // Sets LyricsDir to MusicDir if empty.
 func (cfg *Config) Expand() {
 	cfg.MusicDir = ExpandTilde(os.ExpandEnv(cfg.MusicDir))
 	cfg.LyricsDir = ExpandTilde(os.ExpandEnv(cfg.LyricsDir))
+	cfg.MPD.Connection = os.ExpandEnv(cfg.MPD.Connection)
+	cfg.MPD.Address = os.ExpandEnv(cfg.MPD.Address)
+	cfg.MPD.Password = os.ExpandEnv(cfg.MPD.Password)
 	if strings.Contains(cfg.MPD.Address, string(os.PathSeparator)) {
-		cfg.MPD.Address = ExpandTilde(os.ExpandEnv(cfg.MPD.Address))
+		cfg.MPD.Address = ExpandTilde(cfg.MPD.Address)
 	}
 }
 

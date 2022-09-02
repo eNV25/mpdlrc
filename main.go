@@ -7,15 +7,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/docopt/docopt-go"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/spf13/pflag"
 	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/config"
 )
-
-const PROGNAME = "mpdlrc"
 
 func init() {
 	log.SetFlags(0)
@@ -28,49 +26,34 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
-	var (
-		cfg          = config.DefaultConfig()
-		configFiles  = config.ConfigFiles()
-		flag_dumpcfg = false
-		flag_usage   = false
-	)
+	const usage = `
+Display MPD synchronized lyrics.
 
-	flags := pflag.NewFlagSet(PROGNAME, pflag.ContinueOnError)
-	flags.SortFlags = false
-	flags.BoolVar(&flag_dumpcfg, `dump-config`, false, `dump final config`)
-	flags.BoolVarP(&flag_usage, `help`, `h`, false, `display this help and exit`)
-	flags.StringArrayVar(&configFiles, `config`, configFiles, `use config file`)
+Usage:
+    mpdlrc [options] [--config=FILE]...
 
-	cfg_flags := pflag.NewFlagSet(PROGNAME, pflag.ContinueOnError)
-	cfg_flags.SortFlags = false
-	cfg_flags.ParseErrorsWhitelist = pflag.ParseErrorsWhitelist{UnknownFlags: true}
-	cfg_flags.StringVar(&cfg.MusicDir, `musicdir`, cfg.MusicDir, `override cfg.MusicDir`)
-	cfg_flags.StringVar(&cfg.LyricsDir, `lyricsdir`, cfg.LyricsDir, `override cfg.LyricsDir`)
-	cfg_flags.StringVar(&cfg.MPD.Connection, `mpd-connection`, cfg.MPD.Connection, `override cfg.MPD.Connection ("unix" or "tcp")`)
-	cfg_flags.StringVar(&cfg.MPD.Address, `mpd-address`, cfg.MPD.Address, `override cfg.MPD.Address ("socket" or "host:port")`)
-	cfg_flags.StringVar(&cfg.MPD.Password, `mpd-password`, cfg.MPD.Password, `override cfg.MPD.Password`)
+Options:
+    --config=FILE           Use config file
+    --dump-config           Print final config
 
-	cfg_flags.VisitAll(func(f *pflag.Flag) {
-		flags.Var((*fakeValue)(f), f.Name, f.Usage)
-	})
+Configuration Options:
+    --lyricsdir=DIR         override cfg.LyricsDir
+    --musicdir=DIR          override cfg.MusicDir
+    --mpd-address=ADDR      override cfg.MPD.Address
+    --mpd-connection=CONN   override cfg.MPD.Connection
+    --mpd-password=PASSWD   override cfg.MPD.Password
+`
 
-	args := os.Args[1:]
-
-	if err := flags.Parse(args); err != nil {
-		log.Println(err)
+	opts, err := docopt.ParseDoc(usage)
+	if err != nil {
+		fmt.Println("docopt parse:", err)
 		exitCode = 1
 		return
 	}
 
-	if flag_usage {
-		fmt.Println("Usage of " + PROGNAME + ":")
-		fmt.Print(flags.FlagUsages())
-		exitCode = 0
-		return
-	}
+	cfg := config.DefaultConfig()
 
-	// We merge config files first
-	for _, fpath := range configFiles {
+	for _, fpath := range opts["--config"].([]string) {
 		var err error
 		func() {
 			var f *os.File
@@ -85,36 +68,27 @@ func main() {
 			}
 		}()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			log.Println("read config file:", err)
+			log.Println("config file:", err)
 		}
 	}
 
-	// We parse config flags later, so it overrides config files.
-	_ = cfg_flags.Parse(args)
-
+	cfg.FromOpts(opts)
 	cfg.Expand()
 
 	var logBuilder strings.Builder
 	defer fmt.Fprint(os.Stderr, &logBuilder)
 
-	if flag_dumpcfg {
+	if opts["--dump-config"].(bool) {
 		_ = toml.NewEncoder(&logBuilder).Encode(cfg)
-		exitCode = 0
 		return
 	}
 
 	log.SetOutput(&logBuilder)
 
-	err := internal.NewApplication(cfg).Run()
+	err = internal.NewApplication(cfg).Run()
 	if err != nil {
 		log.Println(err)
+		exitCode = 1
+		return
 	}
 }
-
-type fakeValue pflag.Flag
-
-var _ pflag.Value = (*fakeValue)(nil)
-
-func (*fakeValue) Set(string) error { return nil }
-func (v *fakeValue) Type() string   { return v.Value.Type() }
-func (v *fakeValue) String() string { return v.DefValue }
