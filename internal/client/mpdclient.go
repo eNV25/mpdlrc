@@ -177,8 +177,8 @@ func (c *MPDClient) unlock() {
 	if !c.locked.CompareAndSwap(true, false) {
 		return
 	}
-	c.cond.Broadcast()
 	c.mu.Unlock()
+	c.cond.Broadcast()
 }
 
 func (c *MPDClient) PostEvents(ctx context.Context) {
