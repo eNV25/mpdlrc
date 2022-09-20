@@ -7,7 +7,6 @@ import (
 	"runtime"
 
 	"github.com/gdamore/tcell/v2"
-	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
@@ -34,9 +33,10 @@ type Application struct {
 }
 
 // NewApplication allocates new Application from cfg.
-func NewApplication(cfg *config.Config) *Application {
+func NewApplication(cfg *config.Config, client *client.MPDClient) *Application {
 	app := &Application{
 		cfg:    cfg,
+		client: client,
 		events: make(chan tcell.Event),
 	}
 	return app
@@ -123,20 +123,7 @@ func (app *Application) Run() (err error) {
 		return
 	}
 	defer app.Screen.Fini()
-
-	app.client, err = client.NewMPDClient(app.cfg)
-	if err != nil {
-		return
-	}
-	defer multierr.AppendInvoke(&err, multierr.Invoke(app.client.Close))
-
 	defer app.Quit()
-
-	// Update config with data from MPD
-	app.cfg.FromClient(app.client.MusicDir())
-	if config.Debug {
-		log.Print("\n", app.cfg)
-	}
 
 	ctx := context.Background()
 	ctx = panics.ContextWithHook(ctx, app.Quit)

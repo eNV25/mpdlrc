@@ -12,6 +12,7 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal"
+	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
 )
 
@@ -30,18 +31,19 @@ func main() {
 Display MPD synchronized lyrics.
 
 Usage:
-    mpdlrc [options] [--config=FILE]...
+	mpdlrc [options] [--config=FILE]...
 
 Options:
-    --config=FILE           Use config file
-    --dump-config           Print final config
+	--config=FILE           Use config file
+	--dump-config           Print final config
+	-h, --help              Show this help and exit
 
 Configuration Options:
-    --lyricsdir=DIR         override cfg.LyricsDir
-    --musicdir=DIR          override cfg.MusicDir
-    --mpd-address=ADDR      override cfg.MPD.Address
-    --mpd-connection=CONN   override cfg.MPD.Connection
-    --mpd-password=PASSWD   override cfg.MPD.Password
+	--lyricsdir=DIR         override cfg.LyricsDir
+	--musicdir=DIR          override cfg.MusicDir
+	--mpd-address=ADDR      override cfg.MPD.Address
+	--mpd-connection=CONN   override cfg.MPD.Connection
+	--mpd-password=PASSWD   override cfg.MPD.Password
 `
 
 	opts, err := docopt.ParseDoc(usage)
@@ -78,14 +80,27 @@ Configuration Options:
 	var logBuilder strings.Builder
 	defer fmt.Fprint(os.Stderr, &logBuilder)
 
-	if opts["--dump-config"].(bool) {
-		_ = toml.NewEncoder(&logBuilder).Encode(cfg)
+	conn, err := client.NewMPDClient(cfg)
+	if err != nil {
 		return
+	}
+	defer multierr.AppendInvoke(&err, multierr.Invoke(conn.Close))
+
+	// Update config with data from MPD
+	cfg.FromClient(conn.MusicDir())
+
+	if opts["--dump-config"].(bool) {
+		log.Print(cfg)
+		return
+	}
+
+	if config.Debug {
+		log.Print("\n", cfg, "\n")
 	}
 
 	log.SetOutput(&logBuilder)
 
-	err = internal.NewApplication(cfg).Run()
+	err = internal.NewApplication(cfg, conn).Run()
 	if err != nil {
 		log.Println(err)
 		exitCode = 1
