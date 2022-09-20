@@ -1,0 +1,10 @@
+
+[[language]]
+name = "bash"
+formatter = { command = 'shfmt' }
+
+[[language]]
+name = "go"
+[language.config]
+local = "github.com/env25/mpdlrc"
+gofumpt = true
