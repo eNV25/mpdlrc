@@ -16,7 +16,7 @@ func (w *common) View() views.View {
 	return &w.ViewPort
 }
 
-// resize should be called is Update event is tcell.EventResize
+// resize should be called is Update event is [tcell.EventResize]
 func (w *common) resize() {
 	w.mu.Lock()
 	defer w.mu.Unlock()

@@ -18,7 +18,7 @@ import (
 
 var _ Widget = &Lyrics{}
 
-// LyricsWidget is a Widget implementation.
+// LyricsWidget is a [Widget] implementation.
 type Lyrics struct {
 	common
 }

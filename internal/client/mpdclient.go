@@ -37,7 +37,7 @@ type MPDClient struct {
 
 var _ Client = &MPDClient{}
 
-// NewMPDClient returns a pointer to an instance of MPDClient.
+// NewMPDClient returns a pointer to an instance of [MPDClient].
 // A password of "" can be used if there is no password.
 func NewMPDClient(cfg *config.Config) (*MPDClient, error) {
 	for _, cs := range &[...]struct{ net, addr string }{

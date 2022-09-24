@@ -34,7 +34,7 @@ func DefaultConfig() (cfg *Config) {
 	if host == "" {
 		if port == "" {
 			// Not enough information.
-			// client.NewMPDClient can try guess a few times and set these fields.
+			// [client.NewMPDClient] can try guess a few times and set these fields.
 			cfg.MPD.Connection = ""
 			cfg.MPD.Address = ""
 			cfg.MPD.Password = ""
@@ -142,7 +142,7 @@ func (cfg *Config) FromEnv(getEnv func(string) string) {
 	}
 }
 
-// Expand expands tilde ("~") and variables ("$VAR" or "${VAR}") in paths in Config.
+// Expand expands tilde ("~") and variables ("$VAR" or "${VAR}") in paths in cfg.
 // Sets LyricsDir to MusicDir if empty.
 func (cfg *Config) Expand() {
 	cfg.MusicDir = ExpandEnv(ExpandTilde(cfg.MusicDir))
