@@ -1,15 +1,12 @@
 package main
 
 import (
-	"errors"
-	"fmt"
+	"context"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/docopt/docopt-go"
-	"github.com/pelletier/go-toml/v2"
-	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/client"
@@ -18,17 +15,22 @@ import (
 
 func init() {
 	log.SetFlags(0)
+	log.SetPrefix("mpdlrc: ")
 }
 
 func main() {
-	exitCode := 0
+	var err error
+	var exitCode int
 
 	defer func() {
+		if err != nil {
+			log.Println(err)
+		}
 		os.Exit(exitCode)
 	}()
 
 	const usage = `
-Display MPD synchronized lyrics.
+Display synchronized lyrics for track playing in MPD.
 
 Usage:
 	mpdlrc [options] [--config=FILE]...
@@ -48,46 +50,30 @@ Configuration Options:
 
 	opts, err := docopt.ParseDoc(usage)
 	if err != nil {
-		fmt.Println("docopt parse:", err)
+		log.Println("docopt parse:", err)
 		exitCode = 1
 		return
 	}
 
 	cfg := config.DefaultConfig()
 
-	for _, fpath := range opts["--config"].([]string) {
-		var err error
-		func() {
-			var f *os.File
-			f, err = os.Open(fpath)
-			if err != nil {
-				return
-			}
-			defer multierr.AppendInvoke(&err, multierr.Invoke(f.Close))
-			err = toml.NewDecoder(f).Decode(cfg)
-			if err != nil {
-				return
-			}
-		}()
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			log.Println("config file:", err)
-		}
+	err = cfg.FromFiles(opts["--config"].([]string))
+	if err != nil {
+		log.Println(err)
+		return
 	}
 
+	cfg.FromEnv(config.GetEnv)
 	cfg.FromOpts(opts)
-	cfg.Expand()
-
-	var logBuilder strings.Builder
-	defer fmt.Fprint(os.Stderr, &logBuilder)
 
 	conn, err := client.NewMPDClient(cfg)
 	if err != nil {
 		return
 	}
-	defer multierr.AppendInvoke(&err, multierr.Invoke(conn.Close))
+	defer conn.Close()
 
-	// Update config with data from MPD
 	cfg.FromClient(conn.MusicDir())
+	cfg.Expand()
 
 	if opts["--dump-config"].(bool) {
 		log.Print(cfg)
@@ -95,15 +81,20 @@ Configuration Options:
 	}
 
 	if config.Debug {
-		log.Print("\n", cfg, "\n")
+		log.Print("\n\n", cfg, "\n")
 	}
 
-	log.SetOutput(&logBuilder)
-
-	err = internal.NewApplication(cfg, conn).Run()
+	err = cfg.Assert()
 	if err != nil {
 		log.Println(err)
 		exitCode = 1
 		return
 	}
+
+	var logBuilder strings.Builder
+	defer log.Println(&logBuilder)
+	defer log.SetOutput(log.Writer())
+	log.SetOutput(&logBuilder)
+
+	err = internal.NewApplication(cfg, conn).Run(context.Background())
 }

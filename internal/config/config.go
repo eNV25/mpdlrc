@@ -9,17 +9,18 @@ import (
 
 	"github.com/docopt/docopt-go"
 	"github.com/pelletier/go-toml/v2"
+	"go.uber.org/multierr"
 )
 
 var _ fmt.Stringer = (*Config)(nil)
 
 type Config struct {
-	MusicDir  string
 	LyricsDir string
+	MusicDir  string
 
 	MPD struct {
-		Connection string
 		Address    string
+		Connection string
 		Password   string
 	}
 }
@@ -28,16 +29,18 @@ func DefaultConfig() (cfg *Config) {
 	cfg = &Config{}
 	cfg.MusicDir = "~/Music"
 	cfg.LyricsDir = ""
-	host := os.Getenv("MPD_HOST")
-	port := os.Getenv("MPD_PORT")
+	host := GetEnv("MPD_HOST")
+	port := GetEnv("MPD_PORT")
 	if host == "" {
 		if port == "" {
-			cfg.MPD.Connection = "tcp"
-			cfg.MPD.Address = "localhost:6600"
+			// Not enough information.
+			// client.NewMPDClient can try guess a few times and set these fields.
+			cfg.MPD.Connection = ""
+			cfg.MPD.Address = ""
 			cfg.MPD.Password = ""
 		} else {
 			cfg.MPD.Connection = "tcp"
-			cfg.MPD.Address = "localhost:" + port
+			cfg.MPD.Address = ":" + port
 			cfg.MPD.Password = ""
 		}
 	} else {
@@ -71,13 +74,27 @@ func (cfg *Config) String() string {
 	return b.String()
 }
 
-func (cfg *Config) FromClient(musicDir string, err error) {
-	// Don't use client here to avoid import cycle
-	if cfg.LyricsDir != "" {
-		return
+func (cfg *Config) FromFiles(files []string) (err error) {
+	for _, fpath := range files {
+		errr := cfg.FromFile(fpath)
+		if errr != nil && !errors.Is(errr, os.ErrNotExist) {
+			multierr.AppendInto(&err, errr)
+		}
 	}
+	return
+}
+
+func (cfg *Config) FromFile(fpath string) error {
+	f, err := os.Open(ExpandEnv(ExpandTilde(fpath)))
 	if err != nil {
-		cfg.LyricsDir = cfg.MusicDir
+		return err
+	}
+	defer f.Close()
+	return toml.NewDecoder(f).Decode(cfg)
+}
+
+func (cfg *Config) FromClient(musicDir string, err error) {
+	if err != nil {
 		return
 	}
 	cfg.MusicDir = musicDir
@@ -85,17 +102,39 @@ func (cfg *Config) FromClient(musicDir string, err error) {
 }
 
 func (cfg *Config) FromOpts(opts docopt.Opts) {
-	cfgMusicDir, _ := opts["--musicdir"].(string)
 	cfgLyricsDir, _ := opts["--lyricsdir"].(string)
-	cfgMPDConnection, _ := opts["--mpd-connection"].(string)
+	cfgMusicDir, _ := opts["--musicdir"].(string)
 	cfgMPDAddress, _ := opts["--mpd-address"].(string)
-	cfgMPDPassword, _ := opts["--mpd-password"].(string)
-	for _, x := range &[...]*struct{ to, from *string }{
-		{&cfg.MusicDir, &cfgMusicDir},
-		{&cfg.LyricsDir, &cfgLyricsDir},
-		{&cfg.MPD.Connection, &cfgMPDConnection},
-		{&cfg.MPD.Address, &cfgMPDAddress},
-		{&cfg.MPD.Password, &cfgMPDPassword},
+	cfgMPDConnection, _ := opts["--mpd-connection"].(string)
+	cfgMPDPassword, _ := opts["--mpd-connection"].(string)
+	for _, x := range &[...]*struct{ from, to *string }{
+		{&cfgLyricsDir, &cfg.LyricsDir},
+		{&cfgMusicDir, &cfg.MusicDir},
+		{&cfgMPDAddress, &cfg.MPD.Address},
+		{&cfgMPDConnection, &cfg.MPD.Connection},
+		{&cfgMPDPassword, &cfg.MPD.Password},
+	} {
+		if *x.from != "" {
+			*x.to = *x.from
+		}
+	}
+}
+
+func (cfg *Config) FromEnv(getEnv func(string) string) {
+	if getEnv == nil {
+		getEnv = GetEnv
+	}
+	cfgLyricsDir := getEnv("MPDLRC_LYRICSDIR")
+	cfgMusicDir := getEnv("MPDLRC_MUSICDIR")
+	cfgMPDAddress := getEnv("MPDLRC_MPD_ADDRESS")
+	cfgMPDConnection := getEnv("MPDLRC_MPD_CONNECTION")
+	cfgMPDPassword := getEnv("MPDLRC_MPD_PASSWORD")
+	for _, x := range &[...]*struct{ from, to *string }{
+		{&cfgLyricsDir, &cfg.LyricsDir},
+		{&cfgMusicDir, &cfg.MusicDir},
+		{&cfgMPDAddress, &cfg.MPD.Address},
+		{&cfgMPDConnection, &cfg.MPD.Connection},
+		{&cfgMPDPassword, &cfg.MPD.Password},
 	} {
 		if *x.from != "" {
 			*x.to = *x.from
@@ -106,23 +145,27 @@ func (cfg *Config) FromOpts(opts docopt.Opts) {
 // Expand expands tilde ("~") and variables ("$VAR" or "${VAR}") in paths in Config.
 // Sets LyricsDir to MusicDir if empty.
 func (cfg *Config) Expand() {
-	cfg.MusicDir = ExpandTilde(os.ExpandEnv(cfg.MusicDir))
-	cfg.LyricsDir = ExpandTilde(os.ExpandEnv(cfg.LyricsDir))
-	cfg.MPD.Connection = os.ExpandEnv(cfg.MPD.Connection)
-	cfg.MPD.Address = os.ExpandEnv(cfg.MPD.Address)
-	cfg.MPD.Password = os.ExpandEnv(cfg.MPD.Password)
+	cfg.MusicDir = ExpandEnv(ExpandTilde(cfg.MusicDir))
+	cfg.LyricsDir = ExpandEnv(ExpandTilde(cfg.LyricsDir))
 	if strings.Contains(cfg.MPD.Address, string(os.PathSeparator)) {
 		cfg.MPD.Address = ExpandTilde(cfg.MPD.Address)
 	}
+	cfg.MPD.Connection = ExpandEnv(cfg.MPD.Connection)
+	cfg.MPD.Address = ExpandEnv(cfg.MPD.Address)
+	cfg.MPD.Password = ExpandEnv(cfg.MPD.Password)
+	if cfg.LyricsDir == "" && cfg.MusicDir != "" {
+		cfg.LyricsDir = cfg.MusicDir
+	}
 }
 
-// Assert return error if Config is invalid.
+// Assert return error if cfg is invalid.
 func (cfg *Config) Assert() error {
+	var err error
 	if !filepath.IsAbs(cfg.MusicDir) {
-		return errors.New("Invalid path in MusicDir")
+		multierr.AppendInto(&err, errors.New("Invalid path in MusicDir"))
 	}
 	if !filepath.IsAbs(cfg.LyricsDir) {
-		return errors.New("Invalid path in LyricsDir")
+		multierr.AppendInto(&err, errors.New("Invalid path in LyricsDir"))
 	}
-	return nil
+	return err
 }

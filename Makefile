@@ -1,9 +1,6 @@
 
-# We use no GOFLAGS by default, regardless of host's environment variable.
-GOFLAGS :=
-
 go.module     != go list -m
-cmd.go        := GOFLAGS='${GOFLAGS}' go
+cmd.go        := go
 cmd.gofmt     := gofmt -r '(x) -> x' -s
 cmd.goimports := goimports -local '${go.module}'
 cmd.gofumpt   := gofumpt

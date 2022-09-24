@@ -17,6 +17,7 @@ func TestTrimExt(t *testing.T) {
 		if !reflect.DeepEqual(out, c.out) {
 			t.Errorf("TrimExt(%q) = %q, want %q", c.in, out, c.out)
 		}
+		t.Logf("TrimExt(%q) = %q", c.in, out)
 	}
 }
 
@@ -33,5 +34,6 @@ func TestReplaceExt(t *testing.T) {
 		if !reflect.DeepEqual(out, c.out) {
 			t.Errorf("ReplaceExt(%q, %q) = %q, want %q", c.in, c.ext, out, c.out)
 		}
+		t.Logf("ReplaceExt(%q, %q) = %q", c.in, c.ext, out)
 	}
 }

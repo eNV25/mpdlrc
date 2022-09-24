@@ -17,7 +17,7 @@ func ContextWithHook(ctx context.Context, h func()) context.Context {
 	return ctx
 }
 
-func RunHooksFromContext(ctx context.Context) {
+func runHooksFromContext(ctx context.Context) {
 	v := ctx.Value(key{})
 	if v == nil {
 		return

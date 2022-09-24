@@ -112,7 +112,7 @@ func (app *Application) Quit() {
 }
 
 // Run the application.
-func (app *Application) Run() (err error) {
+func (app *Application) Run(ctx context.Context) (err error) {
 	app.Screen, err = tcell.NewScreen()
 	if err != nil {
 		return
@@ -125,7 +125,6 @@ func (app *Application) Run() (err error) {
 	defer app.Screen.Fini()
 	defer app.Quit()
 
-	ctx := context.Background()
 	ctx = panics.ContextWithHook(ctx, app.Quit)
 	ctx = events.ContextWith(ctx, app.events)
 	ctx, app.quit = context.WithCancel(ctx)

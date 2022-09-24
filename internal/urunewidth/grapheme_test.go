@@ -21,4 +21,5 @@ func TestGraphemeWidth(t *testing.T) {
 	if !reflect.DeepEqual(sw, gw) {
 		t.Errorf("StringWidth(%q) = %v, sum of GraphemeWidth = %v", s, sw, gw)
 	}
+	t.Logf("StringWidth(%q) = %v", s, sw)
 }

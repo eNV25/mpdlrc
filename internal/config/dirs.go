@@ -4,15 +4,47 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
-func ConfigDir(usr string) string {
-	if c, ok := os.LookupEnv("XDG_CONFIG_HOME"); !ok {
-		return filepath.Join(HomeDir(usr), ".config")
-	} else {
-		return c
+func GetEnv(key string) string {
+	if strings.HasPrefix(key, "XDG_") {
+		if ret, ok := os.LookupEnv(key); ok {
+			return ret
+		}
+		switch key {
+		case "XDG_CONFIG_HOME":
+			return filepath.Join(HomeDir(""), ".config")
+		case "XDG_CACHE_HOME":
+			return filepath.Join(HomeDir(""), ".cache")
+		case "XDG_DATA_HOME":
+			return filepath.Join(HomeDir(""), ".local", "share")
+		case "XDG_STATE_HOME":
+			return filepath.Join(HomeDir(""), ".local", "state")
+		case "XDG_DATA_DIRS":
+			return filepath.Join(RootDir(), "usr", "local", "share") +
+				":" + filepath.Join(RootDir(), "usr", "share")
+		case "XDG_CONFIG_DIRS":
+			return filepath.Join(RootDir(), "etc", "xdg")
+		}
 	}
+	switch key {
+	case "HOME":
+		return HomeDir("")
+	}
+	return os.Getenv(key)
+}
+
+func ExpandEnv(s string) string {
+	return os.Expand(s, GetEnv)
+}
+
+func RootDir() string {
+	if runtime.GOOS == "windows" {
+		return os.Getenv("SYSTEMDRIVE") + string(os.PathSeparator)
+	}
+	return string(os.PathSeparator)
 }
 
 func HomeDir(usr string) (h string) {
@@ -27,20 +59,17 @@ func HomeDir(usr string) (h string) {
 	} else {
 		u, err = user.Lookup(usr)
 	}
-	if err == nil {
+	if err == nil && u != nil {
 		h = u.HomeDir
 		return
 	}
 	return
 }
 
-func ExpandTilde(str string) string {
-	str = filepath.FromSlash(str)
-	if strings.HasPrefix(str, "~") {
-		u, p, sep := strings.Cut(str[1:], string(os.PathSeparator))
-		if os.PathSeparator != '/' && !sep {
-			u, p, sep = strings.Cut(str[1:], string('/'))
-		}
+func ExpandTilde(s string) string {
+	s = filepath.FromSlash(s)
+	if strings.HasPrefix(s, "~") {
+		u, p, sep := strings.Cut(s[1:], string(os.PathSeparator))
 		if sep {
 			// ~/path or ~user/path
 			return HomeDir(u) + string(os.PathSeparator) + p
@@ -49,5 +78,5 @@ func ExpandTilde(str string) string {
 		return HomeDir(u)
 	}
 	// path or /path
-	return str
+	return s
 }

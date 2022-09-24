@@ -11,6 +11,7 @@ func Handle(ctx context.Context) {
 	if r == nil {
 		return
 	}
+	runHooksFromContext(ctx)
 	buf := make([]byte, 1024)
 	for {
 		n := runtime.Stack(buf, false)
@@ -21,5 +22,4 @@ func Handle(ctx context.Context) {
 		buf = make([]byte, 2*len(buf))
 	}
 	log.Printf("\npanic: %v\n%s\n", r, buf)
-	RunHooksFromContext(ctx)
 }

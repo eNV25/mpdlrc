@@ -23,7 +23,8 @@ func TestExpandTilde(t *testing.T) {
 		{"some" + s + "random" + s + "file", "some" + s + "random" + s + "file"},
 		{s + "some" + s + "random" + s + "file", s + "some" + s + "random" + s + "file"},
 	}
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
 		current, _ := user.Current()
 		ts = append(ts, []*struct {
 			in  string
@@ -33,7 +34,7 @@ func TestExpandTilde(t *testing.T) {
 			{"~" + current.Username + s, HomeDir(current.Username) + s},
 			{"~" + current.Username + s + "file", HomeDir(current.Username) + s + "file"},
 		}...)
-	} else if runtime.GOOS == "windows" {
+	case "windows":
 		ts = append(ts, []*struct {
 			in  string
 			out string

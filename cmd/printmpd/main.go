@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/env25/gompd/v2/mpd"
+	"github.com/fhs/gompd/v2/mpd"
 
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"

@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	_ "github.com/env25/gompd/v2/mpd" // for mpd_bundle.go
+	_ "github.com/fhs/gompd/v2/mpd" // for mpd_bundle.go
 	"github.com/gdamore/tcell/v2"
 	"go.uber.org/multierr"
 
@@ -41,10 +41,14 @@ var _ Client = &MPDClient{}
 // A password of "" can be used if there is no password.
 func NewMPDClient(cfg *config.Config) (*MPDClient, error) {
 	for _, cs := range &[...]struct{ net, addr string }{
-		{"unix", filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "mpd", "socket")},
-		{"unix", filepath.Join(string(filepath.Separator), "run", "mpd", "socket")},
 		{cfg.MPD.Connection, cfg.MPD.Address},
+		{"unix", filepath.Join(config.GetEnv("XDG_RUNTIME_DIR"), "mpd", "socket")},
+		{"unix", filepath.Join(config.RootDir(), "run", "mpd", "socket")},
+		{"tcp", ":6600"},
 	} {
+		if cs.net == "" || cs.addr == "" {
+			continue
+		}
 		c, err := mpd_DialAuthenticated(cs.net, cs.addr, cfg.MPD.Password)
 		if err != nil {
 			continue
@@ -53,7 +57,7 @@ func NewMPDClient(cfg *config.Config) (*MPDClient, error) {
 		cfg.MPD.Address = cs.addr
 		return newMPDClient(c, cfg), nil
 	}
-	return nil, fmt.Errorf("NewMPDClient: %w", os.ErrNotExist)
+	return nil, fmt.Errorf("NewMPDClient: client not found: %w", os.ErrNotExist)
 }
 
 func newMPDClient(c *mpd_Client, cfg *config.Config) *MPDClient {
@@ -247,7 +251,7 @@ func (c *MPDClient) Close() (err error) {
 err:
 	return fmt.Errorf("MPDClient: Close: %w", err)
 normal:
-	err = multierr.Append(err, c.c.Close())
+	multierr.AppendInto(&err, c.c.Close())
 	if err != nil {
 		goto err
 	}
