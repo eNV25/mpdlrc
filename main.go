@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -19,13 +20,9 @@ func init() {
 }
 
 func main() {
-	var err error
-	var exitCode int
+	exitCode := 0
 
 	defer func() {
-		if err != nil {
-			log.Println(err)
-		}
 		os.Exit(exitCode)
 	}()
 
@@ -50,7 +47,7 @@ Configuration Options:
 
 	opts, err := docopt.ParseDoc(usage)
 	if err != nil {
-		log.Println("docopt parse:", err)
+		log.Println(err)
 		exitCode = 1
 		return
 	}
@@ -60,6 +57,7 @@ Configuration Options:
 	err = cfg.FromFiles(opts["--config"].([]string))
 	if err != nil {
 		log.Println(err)
+		exitCode = 1
 		return
 	}
 
@@ -68,6 +66,8 @@ Configuration Options:
 
 	conn, err := client.NewMPDClient(cfg)
 	if err != nil {
+		log.Println(err)
+		exitCode = 1
 		return
 	}
 	defer conn.Close()
@@ -76,25 +76,32 @@ Configuration Options:
 	cfg.Expand()
 
 	if opts["--dump-config"].(bool) {
-		log.Print(cfg)
+		fmt.Print(cfg)
 		return
 	}
 
+	logw := log.Writer()
+
 	if config.Debug {
-		log.Print("\n\n", cfg, "\n")
+		fmt.Fprint(logw, "\n\n", cfg, "\n")
 	}
 
 	err = cfg.Assert()
 	if err != nil {
-		log.Println(err)
+		log.Printf("%+v", err)
 		exitCode = 1
 		return
 	}
 
 	var logBuilder strings.Builder
-	defer log.Println(&logBuilder)
-	defer log.SetOutput(log.Writer())
 	log.SetOutput(&logBuilder)
+	defer fmt.Fprint(logw, &logBuilder)
+	defer log.SetOutput(logw)
 
 	err = internal.NewApplication(cfg, conn).Run(context.Background())
+	if err != nil {
+		log.Println(err)
+		exitCode = 1
+		return
+	}
 }

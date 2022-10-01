@@ -10,7 +10,7 @@ import (
 
 func GetEnv(key string) string {
 	if strings.HasPrefix(key, "XDG_") {
-		if ret, ok := os.LookupEnv(key); ok {
+		if ret := os.Getenv(key); ret != "" {
 			return ret
 		}
 		switch key {

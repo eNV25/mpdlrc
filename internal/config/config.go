@@ -55,7 +55,7 @@ func DefaultConfig() (cfg *Config) {
 		if at > 0 {
 			password, host = host[:at], host[at+1:]
 		}
-		if port == "" || strings.Contains(host, string(os.PathSeparator)) {
+		if port == "" || strings.ContainsRune(host, os.PathSeparator) {
 			cfg.MPD.Connection = "unix"
 			cfg.MPD.Address = host
 			cfg.MPD.Password = password
@@ -98,7 +98,9 @@ func (cfg *Config) FromClient(musicDir string, err error) {
 		return
 	}
 	cfg.MusicDir = musicDir
-	cfg.LyricsDir = musicDir
+	if cfg.LyricsDir == "" {
+		cfg.LyricsDir = musicDir
+	}
 }
 
 func (cfg *Config) FromOpts(opts docopt.Opts) {
@@ -147,7 +149,7 @@ func (cfg *Config) FromEnv(getEnv func(string) string) {
 func (cfg *Config) Expand() {
 	cfg.MusicDir = ExpandEnv(ExpandTilde(cfg.MusicDir))
 	cfg.LyricsDir = ExpandEnv(ExpandTilde(cfg.LyricsDir))
-	if strings.Contains(cfg.MPD.Address, string(os.PathSeparator)) {
+	if strings.ContainsRune(cfg.MPD.Address, os.PathSeparator) {
 		cfg.MPD.Address = ExpandTilde(cfg.MPD.Address)
 	}
 	cfg.MPD.Connection = ExpandEnv(cfg.MPD.Connection)
@@ -162,10 +164,13 @@ func (cfg *Config) Expand() {
 func (cfg *Config) Assert() error {
 	var err error
 	if !filepath.IsAbs(cfg.MusicDir) {
-		multierr.AppendInto(&err, errors.New("Invalid path in MusicDir"))
+		multierr.AppendInto(&err, fmt.Errorf("Config: invalid path: MusicDir must be absolute: %s", cfg.MusicDir))
 	}
 	if !filepath.IsAbs(cfg.LyricsDir) {
-		multierr.AppendInto(&err, errors.New("Invalid path in LyricsDir"))
+		multierr.AppendInto(&err, fmt.Errorf("Config: invalid path: LyricsDir must be absolute: %s", cfg.LyricsDir))
+	}
+	if strings.ContainsRune(cfg.MPD.Address, os.PathSeparator) && !filepath.IsAbs(cfg.MPD.Address) {
+		multierr.AppendInto(&err, fmt.Errorf("Config: invalid path: MPD.Address (socket) must be absolute: %s", cfg.MPD.Address))
 	}
 	return err
 }
