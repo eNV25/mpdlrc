@@ -9,6 +9,10 @@ import (
 )
 
 func GetEnv(key string) string {
+	switch key {
+	case "HOME":
+		return HomeDir("")
+	}
 	if strings.HasPrefix(key, "XDG_") {
 		if ret := os.Getenv(key); ret != "" {
 			return ret
@@ -28,10 +32,7 @@ func GetEnv(key string) string {
 		case "XDG_CONFIG_DIRS":
 			return filepath.Join(RootDir(), "etc", "xdg")
 		}
-	}
-	switch key {
-	case "HOME":
-		return HomeDir("")
+		return ""
 	}
 	return os.Getenv(key)
 }
@@ -47,23 +48,23 @@ func RootDir() string {
 	return string(os.PathSeparator)
 }
 
-func HomeDir(usr string) (h string) {
+func HomeDir(usr string) string {
 	var u *user.User
 	var err error
 	if usr == "" {
+		h := ""
 		h, err = os.UserHomeDir()
 		if err == nil {
-			return
+			return h
 		}
 		u, err = user.Current()
 	} else {
 		u, err = user.Lookup(usr)
 	}
 	if err == nil && u != nil {
-		h = u.HomeDir
-		return
+		return u.HomeDir
 	}
-	return
+	return ""
 }
 
 func ExpandTilde(s string) string {
