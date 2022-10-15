@@ -44,9 +44,20 @@ func NewApplication(cfg *config.Config, client *client.MPDClient) *Application {
 
 func (app *Application) update(ctx context.Context, ev tcell.Event) {
 	if config.Debug {
-		log.Printf("update: %T", ev)
+		switch ev := ev.(type) {
+		case *event.Func:
+			log.Printf("update: %T: %s", ev, runtime.FuncForPC(reflect.ValueOf(ev.Func).Pointer()).Name())
+		default:
+			log.Printf("update: %T", ev)
+		}
 	}
 	switch ev := ev.(type) {
+	case *client.PlayerEvent:
+		app.updateData(ctx, ev, ev.Data)
+	case *client.OptionsEvent:
+		app.updateData(ctx, ev, ev.Data)
+	case *event.Func:
+		ev.Func()
 	case *tcell.EventKey:
 		switch ev.Key() {
 		case tcell.KeyCtrlL:
@@ -61,22 +72,10 @@ func (app *Application) update(ctx context.Context, ev tcell.Event) {
 			case ' ':
 			}
 		}
-	case *event.Func:
-		if config.Debug {
-			log.Println(
-				"event: *event.Function: ev.Func:",
-				runtime.FuncForPC(reflect.ValueOf(ev.Func).Pointer()).Name(),
-			)
-		}
-		ev.Func()
 	case *tcell.EventResize:
 		// guaranteed to run at program start
 		x, y := ev.Size()
 		app.updateResize(ctx, ev, x, y)
-	case *client.PlayerEvent:
-		app.updateData(ctx, ev, ev.Data)
-	case *client.OptionsEvent:
-		app.updateData(ctx, ev, ev.Data)
 	}
 }
 
