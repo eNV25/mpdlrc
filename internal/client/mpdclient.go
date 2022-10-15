@@ -210,7 +210,7 @@ func (c *MPDClient) TogglePause() bool {
 	defer c.unlock()
 	status, _ := c.c.Status()
 	pause := MPDStatus(status).State() != "pause"
-	c.c.Pause(pause)
+	_ = c.c.Pause(pause)
 	return pause
 }
 
