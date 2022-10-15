@@ -8,10 +8,11 @@ import (
 )
 
 type Client interface {
-	MusicDir() (string, error)
-	Data() (Data, error)
 	Close() error
+	Data() (Data, error)
+	MusicDir() (string, error)
 	PostEvents(ctx context.Context)
+	TogglePause() bool
 }
 
 type Data struct {

@@ -47,6 +47,13 @@ func (app *Application) update(ctx context.Context, ev tcell.Event) {
 		switch ev := ev.(type) {
 		case *event.Func:
 			log.Printf("update: %T: %s", ev, runtime.FuncForPC(reflect.ValueOf(ev.Func).Pointer()).Name())
+		case *tcell.EventKey:
+			switch ev.Key() {
+			case tcell.KeyRune:
+				log.Printf("update: %T: %q", ev, string(ev.Rune()))
+			default:
+				log.Printf("update: %T: %s", ev, tcell.KeyNames[ev.Key()])
+			}
 		default:
 			log.Printf("update: %T", ev)
 		}
@@ -69,7 +76,10 @@ func (app *Application) update(ctx context.Context, ev tcell.Event) {
 			switch ev.Rune() {
 			case 'q':
 				app.Quit()
+			case 'p':
+				app.client.TogglePause()
 			case ' ':
+				app.client.TogglePause()
 			}
 		}
 	case *tcell.EventResize:

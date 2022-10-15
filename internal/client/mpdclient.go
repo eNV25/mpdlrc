@@ -69,41 +69,54 @@ func newMPDClient(c *mpd_Client, cfg *config.Config) *MPDClient {
 	return ret
 }
 
-func (c *MPDClient) Ping() (err error) {
-	c.lock()
-	defer c.unlock()
+func (c *MPDClient) Close() (err error) {
+	if !c.closed.CompareAndSwap(false, true) {
+		err = os.ErrClosed
+		return
+	}
+	err = c.noIdle()
+	c.mu.Lock()
+	c.cond.Broadcast()
+	defer c.mu.Unlock()
 	goto normal
 err:
-	return fmt.Errorf("MPDClient: Ping: %w", err)
+	return fmt.Errorf("MPDClient: Close: %w", err)
 normal:
-	if c.closed.Load() {
-		err = os.ErrClosed
-		goto err
-	}
-	err = c.c.Ping()
+	multierr.AppendInto(&err, c.c.Close())
 	if err != nil {
 		goto err
 	}
 	return nil
 }
 
-func (c *MPDClient) MusicDir() (_ string, err error) {
-	c.lock()
-	defer c.unlock()
-	goto normal
-err:
-	err = fmt.Errorf("MPDClient: MusicDir: %w", err)
-	return
-normal:
-	if c.closed.Load() {
-		err = os.ErrClosed
-		goto err
+func (c *MPDClient) idle() ([]string, error) {
+	c.idling.Store(true)
+	mpdevs, err := c.c.idle()
+	c.idling.Store(false)
+	return mpdevs, err
+}
+
+func (c *MPDClient) noIdle() error {
+	if !c.idling.Load() {
+		return nil
 	}
-	attrs, err := c.c.Command("config").Attrs()
-	if err != nil {
-		goto err
+	return c.c.noIdle()
+}
+
+func (c *MPDClient) lock() {
+	if !c.locked.CompareAndSwap(false, true) {
+		return
 	}
-	return attrs["music_directory"], nil
+	_ = c.noIdle()
+	c.mu.Lock()
+}
+
+func (c *MPDClient) unlock() {
+	if !c.locked.CompareAndSwap(true, false) {
+		return
+	}
+	c.mu.Unlock()
+	c.cond.Broadcast()
 }
 
 func (c *MPDClient) Data() (data Data, err error) {
@@ -146,6 +159,25 @@ start:
 	}
 }
 
+func (c *MPDClient) MusicDir() (_ string, err error) {
+	c.lock()
+	defer c.unlock()
+	goto normal
+err:
+	err = fmt.Errorf("MPDClient: MusicDir: %w", err)
+	return
+normal:
+	if c.closed.Load() {
+		err = os.ErrClosed
+		goto err
+	}
+	attrs, err := c.c.Command("config").Attrs()
+	if err != nil {
+		goto err
+	}
+	return attrs["music_directory"], nil
+}
+
 func (c *MPDClient) lyrics(song Song) *lyrics.Lyrics {
 	id := song.ID()
 	old := c.id.Swap(id)
@@ -155,34 +187,31 @@ func (c *MPDClient) lyrics(song Song) *lyrics.Lyrics {
 	return c.lrc
 }
 
-func (c *MPDClient) idle() ([]string, error) {
-	c.idling.Store(true)
-	mpdevs, err := c.c.idle()
-	c.idling.Store(false)
-	return mpdevs, err
+func (c *MPDClient) Ping() (err error) {
+	c.lock()
+	defer c.unlock()
+	goto normal
+err:
+	return fmt.Errorf("MPDClient: Ping: %w", err)
+normal:
+	if c.closed.Load() {
+		err = os.ErrClosed
+		goto err
+	}
+	err = c.c.Ping()
+	if err != nil {
+		goto err
+	}
+	return nil
 }
 
-func (c *MPDClient) noIdle() error {
-	if !c.idling.Load() {
-		return nil
-	}
-	return c.c.noIdle()
-}
-
-func (c *MPDClient) lock() {
-	if !c.locked.CompareAndSwap(false, true) {
-		return
-	}
-	_ = c.noIdle()
-	c.mu.Lock()
-}
-
-func (c *MPDClient) unlock() {
-	if !c.locked.CompareAndSwap(true, false) {
-		return
-	}
-	c.mu.Unlock()
-	c.cond.Broadcast()
+func (c *MPDClient) TogglePause() bool {
+	c.lock()
+	defer c.unlock()
+	status, _ := c.c.Status()
+	pause := MPDStatus(status).State() != "pause"
+	c.c.Pause(pause)
+	return pause
 }
 
 func (c *MPDClient) PostEvents(ctx context.Context) {
@@ -236,26 +265,6 @@ func (c *MPDClient) PostEvents(ctx context.Context) {
 			}
 		}
 	}
-}
-
-func (c *MPDClient) Close() (err error) {
-	if !c.closed.CompareAndSwap(false, true) {
-		err = os.ErrClosed
-		return
-	}
-	err = c.noIdle()
-	c.mu.Lock()
-	c.cond.Broadcast()
-	defer c.mu.Unlock()
-	goto normal
-err:
-	return fmt.Errorf("MPDClient: Close: %w", err)
-normal:
-	multierr.AppendInto(&err, c.c.Close())
-	if err != nil {
-		goto err
-	}
-	return nil
 }
 
 type MPDSong map[string]string
