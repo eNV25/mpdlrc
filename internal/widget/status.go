@@ -71,7 +71,7 @@ func (w *Status) draw(d *statusData) {
 	w.Fill(' ', styles.Default())
 
 	{
-		r := styles.BorderU
+		r := styles.RuneBorderUpper
 		s := styles.Border()
 		for x := 0; x < vx; x++ {
 			w.SetContent(x, 0, r, nil, s)
@@ -79,7 +79,7 @@ func (w *Status) draw(d *statusData) {
 	}
 
 	{
-		r := styles.BorderD
+		r := styles.RuneBorderLower
 		s := styles.Border()
 		for x := 0; x < vx; x++ {
 			w.SetContent(x, 2, r, nil, s)

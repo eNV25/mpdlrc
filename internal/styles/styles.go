@@ -11,6 +11,6 @@ func Border() tcell.Style {
 }
 
 const (
-	BorderD rune = '🭶'
-	BorderU rune = '🭻'
+	RuneBorderUpper rune = tcell.RuneS9
+	RuneBorderLower rune = tcell.RuneS1
 )

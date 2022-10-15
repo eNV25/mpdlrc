@@ -94,7 +94,7 @@ func (w *Progress) draw(d *progressData) {
 	w.Fill(' ', styles.Default())
 
 	{
-		r := styles.BorderU
+		r := styles.RuneBorderUpper
 		s := styles.Border()
 		for x := 0; x < d.totalX; x++ {
 			w.SetContent(x, 0, r, nil, s)
@@ -110,7 +110,7 @@ func (w *Progress) draw(d *progressData) {
 	}
 
 	{
-		r := styles.BorderD
+		r := styles.RuneBorderLower
 		s := styles.Border()
 		for x := 0; x < d.totalX; x++ {
 			w.SetContent(x, 2, r, nil, s)
