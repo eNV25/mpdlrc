@@ -1333,7 +1333,6 @@ func (cl *mpd_CommandList) PlaylistSave(name string) {
 
 // End executes the command list.
 func (cl *mpd_CommandList) End() error {
-
 	// Tell MPD to start an OK command list:
 	beginID, beginErr := cl.client.cmd("command_list_ok_begin")
 	if beginErr != nil {

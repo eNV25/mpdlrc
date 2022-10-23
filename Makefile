@@ -5,6 +5,8 @@ cmd.gofmt     := gofmt -r '(x) -> x' -s
 cmd.goimports := goimports -local '${go.module}'
 cmd.gofumpt   := gofumpt
 
+go.files != go list -f '{{ $$d := .Dir }}{{ range .GoFiles }}{{ printf "%s/%s" $$d . | printf "%q\n" }}{{ end }}' ./...
+
 build: .phony
 	${cmd.go} build -v -o ./bin/ ./...
 
@@ -24,14 +26,14 @@ fmt: .phony
 	${cmd.go} mod tidy
 	${cmd.go} fix ./...
 	${cmd.go} fmt ./...
-	${cmd.gofmt} -w -l .
-	${cmd.goimports} -w -l .
-	${cmd.gofumpt} -w -l .
+	@ ${cmd.gofmt} -w -l ${go.files}
+	@ ${cmd.goimports} -w -l ${go.files}
+	@ ${cmd.gofumpt} -w -l ${go.files}
 
 checkfmt: .phony
-	! [ "$$(${cmd.gofmt} -l . | wc -l)" -gt 0 ]
-	! [ "$$(${cmd.goimports} -l . | wc -l)" -gt 0 ]
-	! [ "$$(${cmd.gofumpt} -l . | wc -l)" -gt 0 ]
+	@ ! [ "$$(${cmd.gofmt} -l ${go.files} | wc -l)" -gt 0 ]
+	@ ! [ "$$(${cmd.goimports} -l ${go.files} | wc -l)" -gt 0 ]
+	@ ! [ "$$(${cmd.gofumpt} -l ${go.files} | wc -l)" -gt 0 ]
 
 gen: build generate fmt .phony
 
