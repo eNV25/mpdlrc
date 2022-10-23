@@ -79,7 +79,6 @@ import (
 	"go/printer"
 	"go/token"
 	"go/types"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -148,7 +147,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if *outputFile != "" {
-		err := ioutil.WriteFile(*outputFile, code, 0o666)
+		err := os.WriteFile(*outputFile, code, 0o666)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -192,9 +191,7 @@ func bundle(src, dst, dstpkg, prefix, buildTags string) ([]byte, error) {
 	}
 	pkg := pkgs[0]
 
-	if strings.Contains(prefix, "&") {
-		prefix = strings.Replace(prefix, "&", pkg.Syntax[0].Name.Name, -1)
-	}
+	prefix = strings.Replace(prefix, "&", pkg.Syntax[0].Name.Name, -1)
 
 	objsToUpdate := make(map[types.Object]bool)
 	var rename func(from types.Object)
@@ -362,7 +359,7 @@ func bundle(src, dst, dstpkg, prefix, buildTags string) ([]byte, error) {
 			printComments(&out, f.Comments, last, beg)
 
 			buf.Reset()
-			format.Node(&buf, pkg.Fset, &printer.CommentedNode{Node: decl, Comments: f.Comments})
+			_ = format.Node(&buf, pkg.Fset, &printer.CommentedNode{Node: decl, Comments: f.Comments})
 			// Remove each "@@@." in the output.
 			// TODO(adonovan): not hygienic.
 			out.Write(bytes.Replace(buf.Bytes(), []byte("@@@."), nil, -1))
