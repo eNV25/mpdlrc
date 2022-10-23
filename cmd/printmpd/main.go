@@ -22,26 +22,32 @@ func main() {
 	flag.Parse()
 
 	cfg := config.DefaultConfig()
-	c, err := client.NewMPDClient(cfg)
-	check(err)
-	defer func() {
-		check(c.Close())
+
+	func() {
+		c, err := client.NewMPDClient(cfg)
+		check(err)
+		defer func() {
+			check(c.Close())
+		}()
+
+		attrs, err := c.Data()
+		ret, errr := json.MarshalIndent(attrs, "", "  ")
+		fmt.Printf("%s %v %v\n", ret, err, errr)
 	}()
 
-	attrs, err := c.Data()
-	ret, errr := json.MarshalIndent(attrs, "", "  ")
-	fmt.Printf("%s %v %v\n", ret, err, errr)
+	func() {
+		m, err := mpd.DialAuthenticated(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
+		check(err)
+		defer func() {
+			check(m.Close())
+		}()
 
-	m, err := mpd.DialAuthenticated(cfg.MPD.Connection, cfg.MPD.Address, cfg.MPD.Password)
-	check(err)
-	defer func() {
-		check(m.Close())
+		mattrss, err := m.Command("listmounts").AttrsList("mount")
+		ret, errr := json.MarshalIndent(mattrss, "", "  ")
+		fmt.Printf("%s %v %v\n", ret, err, errr)
+
+		mattrs, err := m.Command("config").Attrs()
+		ret, errr = json.MarshalIndent(mattrs, "", "  ")
+		fmt.Printf("%s %v %v\n", ret, err, errr)
 	}()
-	mattrss, err := m.Command("listmounts").AttrsList("mount")
-	ret, errr = json.MarshalIndent(mattrss, "", "  ")
-	fmt.Printf("%s %v %v\n", ret, err, errr)
-
-	mattrs, err := m.Command("config").Attrs()
-	ret, errr = json.MarshalIndent(mattrs, "", "  ")
-	fmt.Printf("%s %v %v\n", ret, err, errr)
 }
