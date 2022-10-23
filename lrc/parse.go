@@ -1,3 +1,5 @@
+// Package lrc implements an [LRC format] parser.
+// [LRC format]: https://en.wikipedia.org/wiki/LRC_(file_format)
 package lrc
 
 import (
@@ -11,8 +13,11 @@ import (
 // NOTE: The parser simply ignores all unmatched lines and doen't return any parse errors.
 
 type (
+	// Duration is [time.Duration].
 	Duration = time.Duration
-	Text     = string
+
+	// Text is [string].
+	Text = string
 )
 
 // Parse parses a byte slice of LRC lyrics.
@@ -29,8 +34,7 @@ func atoi(a byte) byte {
 	return a - '0'
 }
 
-// Parse parses the reader according to the LRC format.
-// https://en.wikipedia.org/wiki/LRC_(file_format)
+// ParseReader parses the reader according to the [LRC format].
 func ParseReader(reader io.Reader) ([]Duration, []Text, error) {
 	times := make([]Duration, 0)
 	lines := make([]Text, 0)

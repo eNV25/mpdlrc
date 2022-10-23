@@ -2,6 +2,7 @@ package urunewidth
 
 import "github.com/mattn/go-runewidth"
 
+// GraphemeWidth returns the number of cells in rs.
 func GraphemeWidth(rs []rune) (wd int) {
 	// copied from [runewidth.StringWidth]
 	for _, r := range rs {

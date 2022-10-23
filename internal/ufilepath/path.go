@@ -1,3 +1,4 @@
+// Package ufilepath contains some functions complementing [filepath].
 package ufilepath
 
 import (
