@@ -1,3 +1,4 @@
+// Package timerpool implements a global timer pool.
 package timerpool
 
 import (
@@ -8,7 +9,7 @@ import (
 // Get returns a timer for the given duration d from the pool.
 func Get(d time.Duration) *time.Timer {
 	if v := timerPool.Get(); v != nil {
-		timer := v.(*time.Timer)
+		timer, _ := v.(*time.Timer)
 		timer.Reset(d)
 		return timer
 	}

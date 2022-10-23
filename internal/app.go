@@ -1,3 +1,4 @@
+// Package internal contains the [Application] struct and other packages.
 package internal
 
 import (

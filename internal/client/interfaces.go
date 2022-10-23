@@ -7,6 +7,7 @@ import (
 	"github.com/env25/mpdlrc/internal/lyrics"
 )
 
+// Client is an interface implemented by all clients.
 type Client interface {
 	Close() error
 	Data() (Data, error)
@@ -15,12 +16,14 @@ type Client interface {
 	TogglePause() bool
 }
 
+// Data is an aggregate type for [Song] [Status] and [lyrics.Lyrics].
 type Data struct {
 	Song
 	Status
 	*lyrics.Lyrics
 }
 
+// Song contains data about a playing in the music player.
 type Song interface {
 	ID() string
 	Title() string
@@ -30,6 +33,7 @@ type Song interface {
 	File() string
 }
 
+// Status contains data about status of the music player.
 type Status interface {
 	Duration() time.Duration
 	Elapsed() time.Duration

@@ -1,3 +1,4 @@
+// Package config implements the [Config] structure, and holds related functions.
 package config
 
 import (
@@ -14,6 +15,7 @@ import (
 
 var _ fmt.Stringer = (*Config)(nil)
 
+// Config holds the configuration.
 type Config struct {
 	LyricsDir string
 	MusicDir  string
@@ -25,6 +27,7 @@ type Config struct {
 	}
 }
 
+// DefaultConfig returns the default configuration.
 func DefaultConfig() (cfg *Config) {
 	cfg = &Config{}
 	cfg.MusicDir = "~/Music"
@@ -74,6 +77,7 @@ func (cfg *Config) String() string {
 	return b.String()
 }
 
+// FromFiles merges the configuration fore files.
 func (cfg *Config) FromFiles(files []string) (err error) {
 	for _, fpath := range files {
 		errr := cfg.FromFile(fpath)
@@ -84,6 +88,7 @@ func (cfg *Config) FromFiles(files []string) (err error) {
 	return
 }
 
+// FromFile merges the configuration from fpath.
 func (cfg *Config) FromFile(fpath string) error {
 	f, err := os.Open(ExpandEnv(ExpandTilde(fpath)))
 	if err != nil {
@@ -93,6 +98,7 @@ func (cfg *Config) FromFile(fpath string) error {
 	return toml.NewDecoder(f).Decode(cfg)
 }
 
+// FromClient merges the configuration from client.
 func (cfg *Config) FromClient(musicDir string, err error) {
 	if err != nil {
 		return
@@ -103,6 +109,7 @@ func (cfg *Config) FromClient(musicDir string, err error) {
 	}
 }
 
+// FromOpts merges the configuration from opts.
 func (cfg *Config) FromOpts(opts docopt.Opts) {
 	cfgLyricsDir, _ := opts["--lyricsdir"].(string)
 	cfgMusicDir, _ := opts["--musicdir"].(string)
@@ -122,15 +129,16 @@ func (cfg *Config) FromOpts(opts docopt.Opts) {
 	}
 }
 
-func (cfg *Config) FromEnv(getEnv func(string) string) {
-	if getEnv == nil {
-		getEnv = GetEnv
+// FromEnv merges the configuration from env.
+func (cfg *Config) FromEnv(env func(string) string) {
+	if env == nil {
+		env = GetEnv
 	}
-	cfgLyricsDir := getEnv("MPDLRC_LYRICSDIR")
-	cfgMusicDir := getEnv("MPDLRC_MUSICDIR")
-	cfgMPDAddress := getEnv("MPDLRC_MPD_ADDRESS")
-	cfgMPDConnection := getEnv("MPDLRC_MPD_CONNECTION")
-	cfgMPDPassword := getEnv("MPDLRC_MPD_PASSWORD")
+	cfgLyricsDir := env("MPDLRC_LYRICSDIR")
+	cfgMusicDir := env("MPDLRC_MUSICDIR")
+	cfgMPDAddress := env("MPDLRC_MPD_ADDRESS")
+	cfgMPDConnection := env("MPDLRC_MPD_CONNECTION")
+	cfgMPDPassword := env("MPDLRC_MPD_PASSWORD")
 	for _, x := range &[...]*struct{ from, to *string }{
 		{&cfgLyricsDir, &cfg.LyricsDir},
 		{&cfgMusicDir, &cfg.MusicDir},

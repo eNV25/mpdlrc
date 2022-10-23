@@ -1,3 +1,4 @@
+// Package panics implements a panic handler.
 package panics
 
 import (
@@ -6,6 +7,7 @@ import (
 	"runtime"
 )
 
+// Handle handles panic in the current goroutine. Should be called with defer.
 func Handle(ctx context.Context) {
 	r := recover()
 	if r == nil {

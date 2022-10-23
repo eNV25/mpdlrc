@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// GetEnv is a wrapper of [os.Getenv] implementing fallback for some environment variables.
 func GetEnv(key string) string {
 	switch key {
 	case "HOME":
@@ -37,10 +38,12 @@ func GetEnv(key string) string {
 	return os.Getenv(key)
 }
 
+// ExpandEnv works like [os.ExpandEnv] but uses [GetEnv].
 func ExpandEnv(s string) string {
 	return os.Expand(s, GetEnv)
 }
 
+// RootDir returns the system root directory.
 func RootDir() string {
 	if runtime.GOOS == "windows" {
 		return os.Getenv("SYSTEMDRIVE") + string(os.PathSeparator)
@@ -48,6 +51,7 @@ func RootDir() string {
 	return string(os.PathSeparator)
 }
 
+// HomeDir returns the user's home directory.
 func HomeDir(usr string) string {
 	var u *user.User
 	var err error
@@ -67,13 +71,15 @@ func HomeDir(usr string) string {
 	return ""
 }
 
+// ExpandTilde expands tilde "~" into the home directory.
 func ExpandTilde(s string) string {
+	const pathSeparator = string(os.PathSeparator)
 	s = filepath.FromSlash(s)
 	if strings.HasPrefix(s, "~") {
-		u, p, sep := strings.Cut(s[1:], string(os.PathSeparator))
+		u, p, sep := strings.Cut(s[1:], pathSeparator)
 		if sep {
 			// ~/path or ~user/path
-			return HomeDir(u) + string(os.PathSeparator) + p
+			return HomeDir(u) + pathSeparator + p
 		}
 		// ~ or ~user
 		return HomeDir(u)

@@ -21,6 +21,7 @@ import (
 	"github.com/env25/mpdlrc/internal/panics"
 )
 
+// MPDClient implents a [Client] for the Music Player Daemon (MPD).
 type MPDClient struct {
 	mu     sync.Mutex
 	closed atomic.Bool
@@ -69,6 +70,7 @@ func newMPDClient(c *mpd_Client, cfg *config.Config) *MPDClient {
 	return ret
 }
 
+// Close finalilly closes the connection.
 func (c *MPDClient) Close() (err error) {
 	if !c.closed.CompareAndSwap(false, true) {
 		err = os.ErrClosed
@@ -119,6 +121,7 @@ func (c *MPDClient) unlock() {
 	c.cond.Broadcast()
 }
 
+// Data returns [Data] for the currectly playing song.
 func (c *MPDClient) Data() (data Data, err error) {
 	c.lock()
 	defer c.unlock()
@@ -159,6 +162,7 @@ start:
 	}
 }
 
+// MusicDir return the music directory, if available.
 func (c *MPDClient) MusicDir() (_ string, err error) {
 	c.lock()
 	defer c.unlock()
@@ -187,6 +191,7 @@ func (c *MPDClient) lyrics(song Song) *lyrics.Lyrics {
 	return c.lrc
 }
 
+// Ping sends no-op message.
 func (c *MPDClient) Ping() (err error) {
 	c.lock()
 	defer c.unlock()
@@ -205,6 +210,7 @@ normal:
 	return nil
 }
 
+// TogglePause toggles the pause state.
 func (c *MPDClient) TogglePause() bool {
 	c.lock()
 	defer c.unlock()
@@ -214,6 +220,7 @@ func (c *MPDClient) TogglePause() bool {
 	return pause
 }
 
+// PostEvents listens for events, and forwards them to [events.PostEvent].
 func (c *MPDClient) PostEvents(ctx context.Context) {
 	defer panics.Handle(ctx)
 
@@ -267,28 +274,54 @@ func (c *MPDClient) PostEvents(ctx context.Context) {
 	}
 }
 
-type MPDSong map[string]string
+// MPDSong implements [Song].
+type MPDSong mpd_Attrs
 
 var _ Song = MPDSong{}
 
-func (s MPDSong) ID() string     { return s["Id"] }
-func (s MPDSong) Title() string  { return s["Title"] }
-func (s MPDSong) Artist() string { return s["Artist"] }
-func (s MPDSong) Album() string  { return s["Album"] }
-func (s MPDSong) Date() string   { return s["Date"] }
-func (s MPDSong) File() string   { return s["file"] }
+// ID returns the song id.
+func (s MPDSong) ID() string { return s["Id"] }
 
+// Title returns the song title.
+func (s MPDSong) Title() string { return s["Title"] }
+
+// Artist returns the song artist.
+func (s MPDSong) Artist() string { return s["Artist"] }
+
+// Album returns the song Album.
+func (s MPDSong) Album() string { return s["Album"] }
+
+// Date returns the song Date.
+func (s MPDSong) Date() string { return s["Date"] }
+
+// File returns the song File.
+func (s MPDSong) File() string { return s["file"] }
+
+// MPDStatus implements [Status].
 type MPDStatus map[string]string
 
 var _ Status = MPDStatus{}
 
-func (s MPDStatus) State() string           { return s["state"] }
+// State returns the player state. "pause", "play"
+func (s MPDStatus) State() string { return s["state"] }
+
+// Duration returns the player song duration.
 func (s MPDStatus) Duration() time.Duration { return s.timeDuration("duration", time.Second) }
-func (s MPDStatus) Elapsed() time.Duration  { return s.timeDuration("elapsed", time.Second) }
-func (s MPDStatus) Repeat() bool            { return s["repeat"] != "0" }
-func (s MPDStatus) Random() bool            { return s["random"] != "0" }
-func (s MPDStatus) Single() bool            { return s["single"] != "0" }
-func (s MPDStatus) Consume() bool           { return s["consume"] != "0" }
+
+// Elapsed returns the pleyer elapsed duration.
+func (s MPDStatus) Elapsed() time.Duration { return s.timeDuration("elapsed", time.Second) }
+
+// Repeat returns repeat option
+func (s MPDStatus) Repeat() bool { return s["repeat"] != "0" }
+
+// Random returns random option.
+func (s MPDStatus) Random() bool { return s["random"] != "0" }
+
+// Single returns single option.
+func (s MPDStatus) Single() bool { return s["single"] != "0" }
+
+// Consume returns consume option.
+func (s MPDStatus) Consume() bool { return s["consume"] != "0" }
 
 func (s MPDStatus) timeDuration(key string, unit time.Duration) time.Duration {
 	parsed, _ := strconv.ParseFloat(s[key], 64)

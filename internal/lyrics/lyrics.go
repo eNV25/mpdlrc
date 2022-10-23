@@ -1,3 +1,4 @@
+// Package lyrics implements the [Lyrics] structure.
 package lyrics
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/env25/mpdlrc/lrc"
 )
 
+// Lyrics holds lyrics.
 type Lyrics struct {
 	Times []time.Duration
 	Lines []string
@@ -62,6 +64,7 @@ func newLyrics(file string) (l *Lyrics) {
 	return
 }
 
+// ForFile returns [Lyrics] the file in disk.
 func ForFile(file string) *Lyrics {
 	return newLyrics(ufilepath.ReplaceExt(file, ".lrc"))
 }

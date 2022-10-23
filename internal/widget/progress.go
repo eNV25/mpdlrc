@@ -16,6 +16,7 @@ import (
 
 var _ Widget = &Progress{}
 
+// Progress is [Widget] implementing a progress bar.
 type Progress struct {
 	common
 }
@@ -28,6 +29,7 @@ type progressData struct {
 	totalX   int
 }
 
+// Update updates the widget after an event.
 func (w *Progress) Update(ctx context.Context, ev tcell.Event) {
 	defer panics.Handle(ctx)
 

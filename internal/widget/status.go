@@ -20,6 +20,7 @@ import (
 
 var _ Widget = &Status{}
 
+// Status is a [Widget] implementing a status bar.
 type Status struct {
 	common
 }
@@ -38,6 +39,7 @@ type statusData struct {
 	// Consume string
 }
 
+// Update updates the widget after an event.
 func (w *Status) Update(ctx context.Context, ev tcell.Event) {
 	defer panics.Handle(ctx)
 

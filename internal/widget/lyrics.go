@@ -18,20 +18,21 @@ import (
 
 var _ Widget = &Lyrics{}
 
-// LyricsWidget is a [Widget] implementation.
+// Lyrics is a [Widget] implementing tne lyrics screen.
 type Lyrics struct {
 	common
 }
 
 type lyricsData struct {
-	Playing bool
 	Times   []time.Duration
 	Lines   []string
 	Elapsed time.Duration
+	Playing bool
 	index   int
 	total   int
 }
 
+// Update updates the widget after an event.
 func (w *Lyrics) Update(ctx context.Context, ev tcell.Event) {
 	defer panics.Handle(ctx)
 

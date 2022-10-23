@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-var tests = []struct {
+var tests = &[...]*struct {
 	lrc   string
 	times []time.Duration
 	lines []string
@@ -76,9 +76,7 @@ var (
 func BenchmarkParseString(b *testing.B) {
 	for x := 0; x < b.N; x++ {
 		for i := range tests {
-			benchmarkParseStringTimes,
-				benchmarkParseStringLines,
-				benchmarkParseStringError = ParseString(tests[i].lrc)
+			benchmarkParseStringTimes, benchmarkParseStringLines, benchmarkParseStringError = ParseString(tests[i].lrc)
 		}
 	}
 }

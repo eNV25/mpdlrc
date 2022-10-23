@@ -1,3 +1,4 @@
+// Package event implements [Event] and derived types.
 package event
 
 import (
@@ -11,17 +12,23 @@ var (
 	_ tcell.Event = &Event{}
 )
 
+// Event implements [tcell.Event]
 type Event time.Time
 
-func (ev *Event) Init()          { *ev = Event(time.Now()) }
+// Init initializes the event with the current time.
+func (ev *Event) Init() { *ev = Event(time.Now()) }
+
+// When reports the time when the event was generated.
 func (ev Event) When() time.Time { return time.Time(ev) }
 
+// Func is a [tcell.Event] that holds a function to be executed.
 type Func struct {
 	Event
 	Func func()
 }
 
-func NewFunction(fn func()) tcell.Event {
+// NewFunc return a [Func] event with fn.
+func NewFunc(fn func()) tcell.Event {
 	ev := &Func{Func: fn}
 	ev.Init()
 	return ev

@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2/views"
 )
 
+// Widget is an iterface for widgets.
 type Widget interface {
 	View() views.View
 	SetView(view views.View)

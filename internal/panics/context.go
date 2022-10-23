@@ -6,6 +6,7 @@ import (
 
 type key struct{}
 
+// ContextWithHook returns a [context.Context] after adding the panic handler hook h.
 func ContextWithHook(ctx context.Context, h func()) context.Context {
 	v := ctx.Value(key{}) // *[]func()
 	if v == nil {

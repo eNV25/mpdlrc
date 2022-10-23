@@ -8,6 +8,7 @@ import (
 	_ "net/http/pprof"
 )
 
+// Debug is true for debug builds.
 const Debug = true
 
 func init() {

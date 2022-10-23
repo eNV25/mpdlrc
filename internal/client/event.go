@@ -11,6 +11,7 @@ type _event struct {
 	Data
 }
 
+// PlayerEvent occurs when the state of the music player changes.
 type PlayerEvent struct{ _event }
 
 func newPlayerEvent(data Data) tcell.Event {
@@ -20,6 +21,7 @@ func newPlayerEvent(data Data) tcell.Event {
 	return ev
 }
 
+// OptionsEvent occurs when an option in the music player changes.
 type OptionsEvent struct{ _event }
 
 func newOptionsEvent(data Data) tcell.Event {
