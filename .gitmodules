@@ -1,0 +1,3 @@
+[submodule "gompd"]
+	path = _modules/gompd
+	url = https://github.com/eNV25/gompd.git

@@ -11,13 +11,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	_ "github.com/fhs/gompd/v2/mpd" // for mpd_bundle.go
 	"github.com/gdamore/tcell/v2"
 	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/lyrics"
+	"github.com/env25/mpdlrc/internal/mpd"
 	"github.com/env25/mpdlrc/internal/panics"
 )
 
@@ -29,7 +29,7 @@ type MPDClient struct {
 	locked atomic.Bool
 	cond   sync.Cond
 
-	c   *mpd_Client
+	c   *mpd.Client
 	cfg *config.Config
 
 	id  atomic.Value // string
@@ -50,7 +50,7 @@ func NewMPDClient(cfg *config.Config) (*MPDClient, error) {
 		if cs.net == "" || cs.addr == "" {
 			continue
 		}
-		c, err := mpd_DialAuthenticated(cs.net, cs.addr, cfg.MPD.Password)
+		c, err := mpd.DialAuthenticated(cs.net, cs.addr, cfg.MPD.Password)
 		if err != nil {
 			continue
 		}
@@ -61,7 +61,7 @@ func NewMPDClient(cfg *config.Config) (*MPDClient, error) {
 	return nil, fmt.Errorf("NewMPDClient: client not found: %w", os.ErrNotExist)
 }
 
-func newMPDClient(c *mpd_Client, cfg *config.Config) *MPDClient {
+func newMPDClient(c *mpd.Client, cfg *config.Config) *MPDClient {
 	ret := &MPDClient{
 		c:   c,
 		cfg: cfg,
@@ -93,7 +93,7 @@ normal:
 
 func (c *MPDClient) idle() ([]string, error) {
 	c.idling.Store(true)
-	mpdevs, err := c.c.idle()
+	mpdevs, err := c.c.Idle()
 	c.idling.Store(false)
 	return mpdevs, err
 }
@@ -102,7 +102,7 @@ func (c *MPDClient) noIdle() error {
 	if !c.idling.Load() {
 		return nil
 	}
-	return c.c.noIdle()
+	return c.c.NoIdle()
 }
 
 func (c *MPDClient) lock() {
@@ -275,7 +275,7 @@ func (c *MPDClient) PostEvents(ctx context.Context) {
 }
 
 // MPDSong implements [Song].
-type MPDSong mpd_Attrs
+type MPDSong mpd.Attrs
 
 var _ Song = MPDSong{}
 
