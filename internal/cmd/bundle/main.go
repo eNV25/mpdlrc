@@ -176,11 +176,11 @@ func bundle(src, dst, dstpkg, prefix, buildTags string) ([]byte, error) {
 	cfg := &packages.Config{}
 	if testingOnlyPackagesConfig != nil {
 		*cfg = *testingOnlyPackagesConfig
-	} else {
+	} /*else {
 		// Bypass default vendor mode, as we need a package not available in the
 		// std module vendor folder.
 		cfg.Env = append(os.Environ(), "GOFLAGS=-mod=mod")
-	}
+	}*/
 	cfg.Mode = packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo
 	pkgs, err := packages.Load(cfg, src)
 	if err != nil {
