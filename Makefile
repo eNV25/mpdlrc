@@ -33,7 +33,7 @@ checkfmt: .phony
 	! [ "$$(${cmd.goimports} -l . | wc -l)" -gt 0 ]
 	! [ "$$(${cmd.gofumpt} -l . | wc -l)" -gt 0 ]
 
-gen: generate fmt .phony
+gen: build generate fmt .phony
 
 tools:
 	go install -v golang.org/x/tools/cmd/goimports@latest
