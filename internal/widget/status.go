@@ -151,12 +151,12 @@ func (w *Status) draw(d *statusData) {
 		suf.WriteString("  ")
 		x := (vx-runewidth.StringWidth(title.String()))/2 - runewidth.StringWidth(pre.String())
 		for _, cs := range &[...]*struct {
-			c string
 			s tcell.Style
+			c string
 		}{
-			{pre.String(), styles.Default()},
-			{title.String(), styles.Default().Bold(true)},
-			{suf.String(), styles.Default()},
+			{styles.Default(), pre.String()},
+			{styles.Default().Bold(true), title.String()},
+			{styles.Default(), suf.String()},
 		} {
 			for clstr, st := "", -1; len(cs.c) > 0; {
 				clstr, cs.c, _, st = uniseg.FirstGraphemeClusterInString(cs.c, st)

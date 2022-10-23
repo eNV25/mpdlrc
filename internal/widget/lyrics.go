@@ -104,7 +104,7 @@ func (w *Lyrics) update(ctx context.Context, d *lyricsData) {
 
 			w.mu.Lock()
 			defer w.mu.Unlock()
-			d.index += 1
+			d.index++
 			d.Elapsed = d.Times[d.index] + time.Since(t)
 			w.update(ctx, d)
 		}
@@ -169,13 +169,13 @@ func (w *Lyrics) model(d *lyricsData) *lyricsModel {
 var _ cellModel = &lyricsModel{}
 
 type lyricsModel struct {
-	vx     int
-	width  int
-	height int
 	xwidth []int
 	combcs [][][]rune
 	styles []tcell.Style
 	widths [][]int
+	vx     int
+	width  int
+	height int
 }
 
 func (m *lyricsModel) GetCell(x, y int) (rune, []rune, tcell.Style, int) {

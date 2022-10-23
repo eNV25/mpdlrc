@@ -84,7 +84,7 @@ func (w *Progress) update(ctx context.Context, d *progressData) {
 
 		w.mu.Lock()
 		defer w.mu.Unlock()
-		d.elapsedX += 1
+		d.elapsedX++
 		w.update(ctx, d)
 	}()
 }

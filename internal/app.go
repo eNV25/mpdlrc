@@ -21,16 +21,15 @@ import (
 type Application struct {
 	tcell.Screen
 
-	events chan tcell.Event
-	quit   func()
-	cancel func()
-
-	cfg    *config.Config
-	client *client.MPDClient
-
 	wprogress widget.Progress
 	wlyrics   widget.Lyrics
 	wstatus   widget.Status
+
+	cfg    *config.Config
+	client *client.MPDClient
+	events chan tcell.Event
+	quit   func()
+	cancel func()
 }
 
 // NewApplication allocates new Application from cfg.
@@ -39,9 +38,13 @@ func NewApplication(cfg *config.Config, client *client.MPDClient) *Application {
 		cfg:    cfg,
 		client: client,
 		events: make(chan tcell.Event),
+		quit:   noop,
+		cancel: noop,
 	}
 	return app
 }
+
+func noop() {}
 
 func (app *Application) update(ctx context.Context, ev tcell.Event) {
 	if config.Debug {
@@ -138,9 +141,6 @@ func (app *Application) Run(ctx context.Context) (err error) {
 	ctx = panics.ContextWithHook(ctx, app.Quit)
 	ctx = events.ContextWith(ctx, app.events)
 	ctx, app.quit = context.WithCancel(ctx)
-
-	// We make sure this function value is never nil
-	app.cancel = func() {}
 
 	go app.Screen.ChannelEvents(app.events, ctx.Done())
 	go app.client.PostEvents(ctx)

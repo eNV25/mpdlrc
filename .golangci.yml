@@ -1,6 +1,4 @@
 linters:
   enable:
     - misspell
-run:
-  skip-dirs:
-    - internal/atomic
+    - revive
