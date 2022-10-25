@@ -1,3 +1,4 @@
-[submodule "gompd"]
+[submodule "internal/_modules/gompd"]
 	path = internal/_modules/gompd
 	url = https://github.com/eNV25/gompd.git
+	branch = my
