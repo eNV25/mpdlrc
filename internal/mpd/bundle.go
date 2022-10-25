@@ -1062,7 +1062,7 @@ type CommandList struct {
 }
 
 // PromisedAttrs is a set of promised attributes (to be) returned by MPD.
-type PromisedAttrs Attrs
+type PromisedAttrs struct{ a Attrs }
 
 // PromisedID is a promised identifier (to be) returned by MPD.
 type PromisedID int
@@ -1070,10 +1070,10 @@ type PromisedID int
 // Value returns the Attrs that were computed when CommandList.End was
 // called. Returns an error if CommandList.End has not yet been called.
 func (pa *PromisedAttrs) Value() (Attrs, error) {
-	if *pa == nil {
+	if pa.a == nil {
 		return nil, errors.New("value has not been computed yet")
 	}
-	return Attrs(*pa), nil
+	return pa.a, nil
 }
 
 // Value returns the ID that was computed when CommandList.End was
@@ -1402,7 +1402,7 @@ func (cl *CommandList) End() error {
 			if aErr != nil {
 				return aErr
 			}
-			*p = PromisedAttrs(a)
+			p.a = a
 		case *PromisedID:
 			a, aErr := cl.client.readAttrs("list_OK")
 			if aErr != nil {
