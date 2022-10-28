@@ -16,7 +16,7 @@ type Client interface {
 	TogglePause() bool
 }
 
-// Data is an aggregate type for [Song] [Status] and [lyrics.Lyrics].
+// Data is an aggregate type for [Song], [Status] and [lyrics.Lyrics].
 type Data struct {
 	Song
 	Status

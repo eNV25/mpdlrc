@@ -34,7 +34,7 @@ func PostFunc(ctx context.Context, fn func()) (done bool) {
 	return PostEvent(ctx, event.NewFunc(fn))
 }
 
-// PostFuncTicker sends an event that executes fn every d duration. Should be called as a new goroutine.
+// PostFuncTicker sends an event that executes fn every period of time d. Should be called as a new goroutine.
 func PostFuncTicker(ctx context.Context, fn func(), d time.Duration) {
 	defer panics.Handle(ctx)
 	ticker := time.NewTicker(d)

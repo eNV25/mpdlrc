@@ -1,4 +1,4 @@
-// Package event implements [Event] and derived types.
+// Package event implements [tcell.Event] and derived types.
 package event
 
 import (

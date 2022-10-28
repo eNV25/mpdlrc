@@ -109,7 +109,7 @@ func (cfg *Config) FromClient(musicDir string, err error) {
 	}
 }
 
-// FromOpts merges the configuration from opts.
+// FromOpts merges the configuration from [docopt.Opts] opts.
 func (cfg *Config) FromOpts(opts docopt.Opts) {
 	cfgLyricsDir, _ := opts["--lyricsdir"].(string)
 	cfgMusicDir, _ := opts["--musicdir"].(string)

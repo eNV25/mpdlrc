@@ -1,2 +1,2 @@
-// Package widget contains [Widget]s
+// Package widget contains [Widget] implementations.
 package widget
