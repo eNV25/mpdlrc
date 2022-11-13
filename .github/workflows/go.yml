@@ -19,19 +19,20 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Check Format
-        if: matrix.os == 'ubuntu-latest'
+      - if: matrix.os == 'ubuntu-latest'
+        uses: extractions/setup-just@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: matrix.os == 'ubuntu-latest'
         run: |
           go install golang.org/x/tools/cmd/goimports@latest
           go install mvdan.cc/gofumpt@latest
-          make checkfmt
-      - name: Test
-        run: |
-          go test -v ./...
-      - name: Build
-        run: |
-          go build -v ./...
-          go build -v -tags=debug ./...
+          just checkfmt
+      - run: |
+          go test -race -v ./...
+      - run: |
+          go build -race -v ./...
+          go build -race -v -tags=debug ./...
   golangci:
     name: lint
     runs-on: ubuntu-latest
