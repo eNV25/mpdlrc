@@ -4,30 +4,25 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"io"
+	stdlog "log"
 	"os"
 	"strings"
 
 	"github.com/docopt/docopt-go"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
 )
 
-func init() {
-	log.SetFlags(0)
-	log.SetPrefix("mpdlrc: ")
+func main() {
+	os.Exit(maine())
 }
 
-func main() {
-	exitCode := 0
-
-	defer func() {
-		os.Exit(exitCode)
-	}()
-
-	const usage = `
+const usage = `
 Display synchronized lyrics for track playing in MPD.
 
 Usage:
@@ -46,20 +41,36 @@ Configuration Options:
 	--mpd-password=PASSWD   override cfg.MPD.Password
 `
 
+func maine() int {
+	ctx := context.Background()
+
+	if config.Debug {
+		stdlog.SetFlags(0)
+
+		var logBuilder strings.Builder
+		defer fmt.Fprint(os.Stderr, &logBuilder)
+		log.Logger = zerolog.New(&zerolog.ConsoleWriter{Out: &logBuilder}).With().Timestamp().Logger()
+
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		stdlog.SetOutput(&log.Logger)
+
+	} else {
+		zerolog.SetGlobalLevel(zerolog.Disabled)
+		stdlog.SetOutput(io.Discard)
+	}
+
 	opts, err := docopt.ParseDoc(usage)
 	if err != nil {
-		log.Println(err)
-		exitCode = 1
-		return
+		log.Err(err).Send()
+		return 1
 	}
 
 	cfg := config.DefaultConfig()
 
 	err = cfg.FromFiles(opts["--config"].([]string))
 	if err != nil {
-		log.Println(err)
-		exitCode = 1
-		return
+		log.Err(err).Send()
+		return 1
 	}
 
 	cfg.FromEnv(config.GetEnv)
@@ -67,9 +78,8 @@ Configuration Options:
 
 	conn, err := client.NewMPDClient(cfg)
 	if err != nil {
-		log.Println(err)
-		exitCode = 1
-		return
+		log.Err(err).Send()
+		return 1
 	}
 	defer conn.Close()
 
@@ -78,31 +88,24 @@ Configuration Options:
 
 	if opts["--dump-config"].(bool) {
 		fmt.Print(cfg)
-		return
+		return 0
 	}
 
-	logw := log.Writer()
-
 	if config.Debug {
-		fmt.Fprint(logw, "\n\n", cfg, "\n")
+		fmt.Fprint(os.Stderr, "\n", cfg, "\n")
 	}
 
 	err = cfg.Assert()
 	if err != nil {
-		log.Printf("%+v", err)
-		exitCode = 1
-		return
+		log.Err(err).Send()
+		return 1
 	}
 
-	var logBuilder strings.Builder
-	log.SetOutput(&logBuilder)
-	defer fmt.Fprint(logw, &logBuilder)
-	defer log.SetOutput(logw)
-
-	err = internal.NewApplication(cfg, conn).Run(context.Background())
+	err = internal.NewApplication(cfg, conn).Run(ctx)
 	if err != nil {
-		log.Println(err)
-		exitCode = 1
-		return
+		log.Err(err).Send()
+		return 1
 	}
+
+	return 0
 }

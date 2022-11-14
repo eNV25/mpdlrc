@@ -3,11 +3,13 @@ package internal
 
 import (
 	"context"
-	"log"
 	"reflect"
 	"runtime"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
@@ -46,30 +48,31 @@ func NewApplication(cfg *config.Config, client *client.MPDClient) *Application {
 
 func noop() {}
 
-func (app *Application) update(ctx context.Context, ev tcell.Event) {
-	if config.Debug {
-		switch ev := ev.(type) {
-		case *event.Func:
-			log.Printf("update: %T: %s", ev, runtime.FuncForPC(reflect.ValueOf(ev.Func).Pointer()).Name())
-		case *tcell.EventKey:
-			switch ev.Key() {
-			case tcell.KeyRune:
-				log.Printf("update: %T: %q", ev, string(ev.Rune()))
-			default:
-				log.Printf("update: %T: %s", ev, tcell.KeyNames[ev.Key()])
-			}
-		default:
-			log.Printf("update: %T", ev)
-		}
+func typeName(v any) string {
+	return reflect.TypeOf(v).String()
+}
+
+func funcName(fn any) string {
+	s := runtime.FuncForPC(uintptr(reflect.ValueOf(fn).UnsafePointer())).Name()
+	if i := strings.LastIndexByte(s, '/'); i >= 0 {
+		return s[i+1:]
 	}
+	return s
+}
+
+func (app *Application) update(ctx context.Context, ev tcell.Event) {
+	logev := log.Debug()
+	logev.Str("Event", typeName(ev))
 	switch ev := ev.(type) {
 	case *client.PlayerEvent:
 		app.updateData(ctx, ev, ev.Data)
 	case *client.OptionsEvent:
 		app.updateData(ctx, ev, ev.Data)
 	case *event.Func:
+		logev.Str("Func", funcName(ev.Func))
 		ev.Func()
 	case *tcell.EventKey:
+		logev.Str("Key", tcell.KeyNames[ev.Key()])
 		switch ev.Key() {
 		case tcell.KeyCtrlL:
 			x, y := app.Screen.Size()
@@ -77,6 +80,7 @@ func (app *Application) update(ctx context.Context, ev tcell.Event) {
 		case tcell.KeyCtrlC, tcell.KeyEscape:
 			app.Quit()
 		case tcell.KeyRune:
+			logev.Str("Key", string(ev.Rune()))
 			switch ev.Rune() {
 			case 'q':
 				app.Quit()
@@ -89,8 +93,10 @@ func (app *Application) update(ctx context.Context, ev tcell.Event) {
 	case *tcell.EventResize:
 		// guaranteed to run at program start
 		x, y := ev.Size()
+		logev.Dict("Size", zerolog.Dict().Int("X", x).Int("Y", y))
 		app.updateResize(ctx, ev, x, y)
 	}
+	logev.Msg("Update")
 }
 
 func (app *Application) updateData(ctx context.Context, ev tcell.Event, data client.Data) {
@@ -113,7 +119,7 @@ func (app *Application) updateResize(ctx context.Context, ev tcell.Event, x, y i
 	app.wstatus.View().Resize(0, y-3, x, 3)
 	data, err := app.client.Data()
 	if err != nil {
-		log.Println("updateResize:", err)
+		log.Err(err).Msg("UpdateResize")
 		return
 	}
 	app.updateData(ctx, ev, data)
