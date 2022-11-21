@@ -10,12 +10,12 @@ import (
 	"strings"
 
 	"github.com/docopt/docopt-go"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
+	"github.com/env25/mpdlrc/internal/zerolog"
+	"github.com/env25/mpdlrc/internal/zerolog/log"
 )
 
 func main() {

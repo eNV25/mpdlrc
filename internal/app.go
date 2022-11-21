@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
@@ -17,6 +15,8 @@ import (
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/widget"
+	"github.com/env25/mpdlrc/internal/zerolog"
+	"github.com/env25/mpdlrc/internal/zerolog/log"
 )
 
 // Application struct. Call (*Application).Run to run.
