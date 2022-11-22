@@ -43,4 +43,6 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: golangci-lint
+        with:
+          skip-cache: true
         uses: golangci/golangci-lint-action@v3
