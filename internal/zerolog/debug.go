@@ -116,16 +116,6 @@ type BurstSampler = zerolog.BurstSampler
 
 type LevelSampler = zerolog.LevelSampler
 
-type SyslogWriter = zerolog.SyslogWriter
-
-func SyslogLevelWriter(w SyslogWriter) LevelWriter {
-	return zerolog.SyslogLevelWriter(w)
-}
-
-func SyslogCEEWriter(w SyslogWriter) LevelWriter {
-	return zerolog.SyslogCEEWriter(w)
-}
-
 type LevelWriter = zerolog.LevelWriter
 
 func SyncWriter(w io.Writer) io.Writer {

@@ -829,24 +829,6 @@ func (s LevelSampler) Sample(lvl Level) bool {
 	return false
 }
 
-type SyslogWriter interface {
-	io.Writer
-	Debug(m string) error
-	Info(m string) error
-	Warning(m string) error
-	Err(m string) error
-	Emerg(m string) error
-	Crit(m string) error
-}
-
-func SyslogLevelWriter(w SyslogWriter) LevelWriter {
-	return nil
-}
-
-func SyslogCEEWriter(w SyslogWriter) LevelWriter {
-	return nil
-}
-
 type LevelWriter interface {
 	io.Writer
 	WriteLevel(level Level, p []byte) (n int, err error)
