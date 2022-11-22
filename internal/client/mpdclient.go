@@ -14,7 +14,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"go.uber.org/multierr"
 
-	"github.com/env25/mpdlrc/internal/config"
+	"github.com/env25/mpdlrc/internal/dirs"
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/mpd"
@@ -29,42 +29,42 @@ type MPDClient struct {
 	locked atomic.Bool
 	cond   sync.Cond
 
-	c   *mpd.Client
-	cfg *config.Config
+	c *mpd.Client
 
-	id  atomic.Value // string
-	lrc *lyrics.Lyrics
+	id        atomic.Value // string
+	lrc       *lyrics.Lyrics
+	lyricsDir *string
 }
 
 var _ Client = &MPDClient{}
 
 // NewMPDClient returns a pointer to an instance of [MPDClient].
 // A password of "" can be used if there is no password.
-func NewMPDClient(cfg *config.Config) (*MPDClient, error) {
+func NewMPDClient(conntype, addr, passwd, lyricsdir *string) (*MPDClient, error) {
 	for _, cs := range &[...]struct{ net, addr string }{
-		{cfg.MPD.Connection, cfg.MPD.Address},
-		{"unix", filepath.Join(config.GetEnv("XDG_RUNTIME_DIR"), "mpd", "socket")},
-		{"unix", filepath.Join(config.RootDir(), "run", "mpd", "socket")},
+		{*conntype, *addr},
+		{"unix", filepath.Join(dirs.GetEnv("XDG_RUNTIME_DIR"), "mpd", "socket")},
+		{"unix", filepath.Join(dirs.RootDir(), "run", "mpd", "socket")},
 		{"tcp", ":6600"},
 	} {
 		if cs.net == "" || cs.addr == "" {
 			continue
 		}
-		c, err := mpd.DialAuthenticated(cs.net, cs.addr, cfg.MPD.Password)
+		c, err := mpd.DialAuthenticated(cs.net, cs.addr, *passwd)
 		if err != nil {
 			continue
 		}
-		cfg.MPD.Connection = cs.net
-		cfg.MPD.Address = cs.addr
-		return newMPDClient(c, cfg), nil
+		*conntype = cs.net
+		*addr = cs.addr
+		return newMPDClient(c, lyricsdir), nil
 	}
 	return nil, fmt.Errorf("NewMPDClient: client not found: %w", os.ErrNotExist)
 }
 
-func newMPDClient(c *mpd.Client, cfg *config.Config) *MPDClient {
+func newMPDClient(c *mpd.Client, lyricsdir *string) *MPDClient {
 	ret := &MPDClient{
-		c:   c,
-		cfg: cfg,
+		c:         c,
+		lyricsDir: lyricsdir,
 	}
 	ret.cond.L = &ret.mu
 	return ret
@@ -186,7 +186,7 @@ func (c *MPDClient) lyrics(song Song) *lyrics.Lyrics {
 	id := song.ID()
 	old := c.id.Swap(id)
 	if id != old {
-		c.lrc = lyrics.ForFile(filepath.Join(c.cfg.LyricsDir, filepath.FromSlash(song.File())))
+		c.lrc = lyrics.ForFile(filepath.Join(*c.lyricsDir, filepath.FromSlash(song.File())))
 	}
 	return c.lrc
 }

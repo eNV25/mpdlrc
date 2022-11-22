@@ -14,6 +14,7 @@ import (
 	"github.com/env25/mpdlrc/internal"
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
+	"github.com/env25/mpdlrc/internal/dirs"
 	"github.com/env25/mpdlrc/internal/zerolog"
 	"github.com/env25/mpdlrc/internal/zerolog/log"
 )
@@ -62,17 +63,17 @@ func maine() int {
 		return 1
 	}
 
-	cfg.FromEnv(config.GetEnv)
+	cfg.FromEnv(dirs.GetEnv)
 	cfg.FromOpts(opts)
 
-	conn, err := client.NewMPDClient(cfg)
+	conn, err := client.NewMPDClient(&cfg.MPD.Connection, &cfg.MPD.Address, &cfg.MPD.Password, &cfg.LyricsDir)
 	if err != nil {
 		log.Err(err).Send()
 		return 1
 	}
 	defer conn.Close()
 
-	cfg.FromClient(conn.MusicDir())
+	cfg.FromClient(conn)
 	cfg.Expand()
 
 	if opts["--dump-config"].(bool) {

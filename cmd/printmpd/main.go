@@ -22,9 +22,10 @@ func main() {
 	flag.Parse()
 
 	cfg := config.DefaultConfig()
+	cfg.Expand()
 
 	func() {
-		c, err := client.NewMPDClient(cfg)
+		c, err := client.NewMPDClient(&cfg.MPD.Connection, &cfg.MPD.Address, &cfg.MPD.Password, &cfg.LyricsDir)
 		check(err)
 		defer func() {
 			check(c.Close())

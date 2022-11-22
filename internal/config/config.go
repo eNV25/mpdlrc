@@ -11,6 +11,9 @@ import (
 	"github.com/docopt/docopt-go"
 	"github.com/pelletier/go-toml/v2"
 	"go.uber.org/multierr"
+
+	"github.com/env25/mpdlrc/internal/client"
+	"github.com/env25/mpdlrc/internal/dirs"
 )
 
 var _ fmt.Stringer = (*Config)(nil)
@@ -32,8 +35,8 @@ func DefaultConfig() (cfg *Config) {
 	cfg = &Config{}
 	cfg.MusicDir = "~/Music"
 	cfg.LyricsDir = ""
-	host := GetEnv("MPD_HOST")
-	port := GetEnv("MPD_PORT")
+	host := dirs.GetEnv("MPD_HOST")
+	port := dirs.GetEnv("MPD_PORT")
 	if host == "" {
 		if port == "" {
 			// Not enough information.
@@ -90,7 +93,7 @@ func (cfg *Config) FromFiles(files []string) (err error) {
 
 // FromFile merges the configuration from fpath.
 func (cfg *Config) FromFile(fpath string) error {
-	f, err := os.Open(ExpandEnv(ExpandTilde(fpath)))
+	f, err := os.Open(dirs.ExpandEnv(dirs.ExpandTilde(fpath)))
 	if err != nil {
 		return err
 	}
@@ -99,7 +102,8 @@ func (cfg *Config) FromFile(fpath string) error {
 }
 
 // FromClient merges the configuration from client.
-func (cfg *Config) FromClient(musicDir string, err error) {
+func (cfg *Config) FromClient(c client.Client) {
+	musicDir, err := c.MusicDir()
 	if err != nil {
 		return
 	}
@@ -132,7 +136,7 @@ func (cfg *Config) FromOpts(opts docopt.Opts) {
 // FromEnv merges the configuration from env.
 func (cfg *Config) FromEnv(env func(string) string) {
 	if env == nil {
-		env = GetEnv
+		env = dirs.GetEnv
 	}
 	cfgLyricsDir := env("MPDLRC_LYRICSDIR")
 	cfgMusicDir := env("MPDLRC_MUSICDIR")
@@ -155,14 +159,14 @@ func (cfg *Config) FromEnv(env func(string) string) {
 // Expand expands tilde ("~") and variables ("$VAR" or "${VAR}") in paths in cfg.
 // Sets LyricsDir to MusicDir if empty.
 func (cfg *Config) Expand() {
-	cfg.MusicDir = ExpandEnv(ExpandTilde(cfg.MusicDir))
-	cfg.LyricsDir = ExpandEnv(ExpandTilde(cfg.LyricsDir))
+	cfg.MusicDir = dirs.ExpandEnv(dirs.ExpandTilde(cfg.MusicDir))
+	cfg.LyricsDir = dirs.ExpandEnv(dirs.ExpandTilde(cfg.LyricsDir))
 	if strings.ContainsRune(cfg.MPD.Address, os.PathSeparator) {
-		cfg.MPD.Address = ExpandTilde(cfg.MPD.Address)
+		cfg.MPD.Address = dirs.ExpandTilde(cfg.MPD.Address)
 	}
-	cfg.MPD.Connection = ExpandEnv(cfg.MPD.Connection)
-	cfg.MPD.Address = ExpandEnv(cfg.MPD.Address)
-	cfg.MPD.Password = ExpandEnv(cfg.MPD.Password)
+	cfg.MPD.Connection = dirs.ExpandEnv(cfg.MPD.Connection)
+	cfg.MPD.Address = dirs.ExpandEnv(cfg.MPD.Address)
+	cfg.MPD.Password = dirs.ExpandEnv(cfg.MPD.Password)
 	if cfg.LyricsDir == "" && cfg.MusicDir != "" {
 		cfg.LyricsDir = cfg.MusicDir
 	}
