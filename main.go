@@ -26,38 +26,27 @@ const usage = `
 Display synchronized lyrics for track playing in MPD.
 
 Usage:
-	mpdlrc [options] [--config=FILE]...
+	mpdlrc -h|--help
+	mpdlrc [options]
+	mpdlrc [options] --config=FILE...
 
 Options:
+	-h, --help              Show this help and exit
 	--config=FILE           Use config file
 	--dump-config           Print final config
-	-h, --help              Show this help and exit
 
 Configuration Options:
 	--lyricsdir=DIR         override cfg.LyricsDir
 	--musicdir=DIR          override cfg.MusicDir
-	--mpd-address=ADDR      override cfg.MPD.Address
 	--mpd-connection=CONN   override cfg.MPD.Connection
+	--mpd-address=ADDR      override cfg.MPD.Address
 	--mpd-password=PASSWD   override cfg.MPD.Password
 `
 
 func maine() int {
+	stdlog.SetFlags(0)
+
 	ctx := context.Background()
-
-	if config.Debug {
-		stdlog.SetFlags(0)
-
-		var logBuilder strings.Builder
-		defer fmt.Fprint(os.Stderr, &logBuilder)
-		log.Logger = zerolog.New(&zerolog.ConsoleWriter{Out: &logBuilder}).With().Timestamp().Logger()
-
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		stdlog.SetOutput(&log.Logger)
-
-	} else {
-		zerolog.SetGlobalLevel(zerolog.Disabled)
-		stdlog.SetOutput(io.Discard)
-	}
 
 	opts, err := docopt.ParseDoc(usage)
 	if err != nil {
@@ -89,6 +78,19 @@ func maine() int {
 	if opts["--dump-config"].(bool) {
 		fmt.Print(cfg)
 		return 0
+	}
+
+	if config.Debug {
+		var logBuilder strings.Builder
+		defer fmt.Fprint(os.Stderr, &logBuilder)
+		log.Logger = zerolog.New(&zerolog.ConsoleWriter{Out: &logBuilder}).With().Timestamp().Logger()
+
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		stdlog.SetOutput(&log.Logger)
+
+	} else {
+		zerolog.SetGlobalLevel(zerolog.Disabled)
+		stdlog.SetOutput(io.Discard)
 	}
 
 	if config.Debug {
