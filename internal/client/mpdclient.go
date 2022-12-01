@@ -302,7 +302,7 @@ type MPDStatus map[string]string
 
 var _ Status = MPDStatus{}
 
-// State returns the player state. "pause", "play"
+// State returns the player state. "pause", "play".
 func (s MPDStatus) State() string { return s["state"] }
 
 // Duration returns the player song duration.
@@ -311,7 +311,7 @@ func (s MPDStatus) Duration() time.Duration { return s.timeDuration("duration", 
 // Elapsed returns the pleyer elapsed duration.
 func (s MPDStatus) Elapsed() time.Duration { return s.timeDuration("elapsed", time.Second) }
 
-// Repeat returns repeat option
+// Repeat returns repeat option.
 func (s MPDStatus) Repeat() bool { return s["repeat"] != "0" }
 
 // Random returns random option.

@@ -1,4 +1,19 @@
 linters:
   enable:
+    - asciicheck
+    - bidichk
+    - errcheck
+    - godot
+    - gofmt
+    - gofumpt
+    - goimports
+    - gosimple
+    - govet
+    - ineffassign
     - misspell
+    - prealloc
     - revive
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unused

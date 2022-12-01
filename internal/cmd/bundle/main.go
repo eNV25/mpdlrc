@@ -455,7 +455,7 @@ func quoteArgs(ss []string) []string {
 	// > Quoted strings use Go syntax and are evaluated before execution; a
 	// > quoted string appears as a single argument to the generator.
 	//
-	var qs []string
+	qs := make([]string, 0, len(ss))
 	for _, s := range ss {
 		if s == "" || containsSpace(s) {
 			s = strconv.Quote(s)

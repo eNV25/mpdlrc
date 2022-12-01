@@ -12,7 +12,7 @@ var (
 	_ tcell.Event = &Event{}
 )
 
-// Event implements [tcell.Event]
+// Event implements [tcell.Event].
 type Event time.Time
 
 // Init initializes the event with the current time.
