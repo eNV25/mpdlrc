@@ -14,6 +14,7 @@ import (
 
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/dirs"
+	"github.com/env25/mpdlrc/internal/mpdconf"
 )
 
 var _ fmt.Stringer = (*Config)(nil)
@@ -105,11 +106,36 @@ func (cfg *Config) FromFile(fpath string) error {
 func (cfg *Config) FromClient(c client.Client) {
 	musicDir, err := c.MusicDir()
 	if err != nil {
+		if _, ok := c.(*client.MPDClient); ok {
+			cfg.fromMPDConfig()
+		}
 		return
 	}
 	cfg.MusicDir = musicDir
-	if cfg.LyricsDir == "" {
-		cfg.LyricsDir = musicDir
+	cfg.fixLyricsDir()
+}
+
+func (cfg *Config) fromMPDConfig() {
+	for _, fpath := range &[...]string{
+		filepath.Join(dirs.GetEnv("XDG_CONFIG_HOME"), "mpd", "mpd.conf"),
+		filepath.Join(dirs.HomeDir(""), ".mpdconf"),
+		filepath.Join(dirs.HomeDir(""), ".mpd", "mpd.conf"),
+		filepath.Join(dirs.RootDir(), "etc", "mpd.conf"),
+	} {
+		f, err := os.Open(fpath)
+		if err != nil {
+			continue
+		}
+		defer f.Close()
+		var s mpdconf.Scanner
+		s.Init(f)
+		for s.Next() {
+			if v := s.Str("music_directory"); v != "" {
+				cfg.MusicDir = v
+				cfg.fixLyricsDir()
+				return
+			}
+		}
 	}
 }
 
@@ -167,7 +193,11 @@ func (cfg *Config) Expand() {
 	cfg.MPD.Connection = dirs.ExpandEnv(cfg.MPD.Connection)
 	cfg.MPD.Address = dirs.ExpandEnv(cfg.MPD.Address)
 	cfg.MPD.Password = dirs.ExpandEnv(cfg.MPD.Password)
-	if cfg.LyricsDir == "" && cfg.MusicDir != "" {
+	cfg.fixLyricsDir()
+}
+
+func (cfg *Config) fixLyricsDir() {
+	if cfg.LyricsDir == "" {
 		cfg.LyricsDir = cfg.MusicDir
 	}
 }
