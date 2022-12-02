@@ -1,10 +1,9 @@
 
 [[language]]
 name = "bash"
-formatter = { command = 'shfmt' }
+formatter.command = "shfmt"
 
 [[language]]
 name = "go"
-[language.config]
-local = "github.com/env25/mpdlrc"
-gofumpt = true
+config.local = "github.com/env25/mpdlrc"
+config.gofumpt = true
