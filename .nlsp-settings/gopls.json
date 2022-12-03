@@ -1,0 +1,6 @@
+{
+  "gopls": {
+    "local": "github.com/env25/mpdlrc",
+    "gofumpt": true
+  }
+}
