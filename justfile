@@ -5,7 +5,7 @@ goimports := "goimports -local " + go-mod
 gofumpt   := "gofumpt"
 
 go-mod   := `go list -m`
-go-files := replace(`go list -f '{{- $d := .Dir -}}{{- range .GoFiles -}}{{- printf "%s/%s" $d . | printf "%q\n" -}}{{- end -}}' ./...`, "\n", " ")
+go-files := "'" + replace(replace(`go list -f '{{ $d := .Dir }}{{ range .GoFiles }}{{ printf "%s/%s\n" $d . }}{{ end }}' ./...`, "'", "'\\''"), "\n", "' '") + "'"
 
 build:
 	{{ go }} build -v -o ./bin/ ./...
