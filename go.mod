@@ -7,8 +7,8 @@ require (
 	github.com/fhs/gompd/v2 v2.3.1-0.20221204164802-46d3f48f8632
 	github.com/gdamore/tcell/v2 v2.5.3
 	github.com/mattn/go-runewidth v0.0.14
-	github.com/pelletier/go-toml/v2 v2.0.5
-	github.com/rivo/uniseg v0.4.2
+	github.com/pelletier/go-toml/v2 v2.0.6
+	github.com/rivo/uniseg v0.4.3
 	github.com/rs/zerolog v1.28.0
 	go.uber.org/multierr v1.8.0
 	golang.org/x/tools v0.3.0
