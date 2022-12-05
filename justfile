@@ -1,4 +1,6 @@
 
+export GOENV := "."
+
 go        := "go"
 gofmt     := "gofmt -r '(x) -> x' -s"
 goimports := "goimports -local " + go-mod
@@ -15,6 +17,9 @@ run:
 
 debug *args:
 	{{ go }} run -v -tags=debug . {{ args }}
+
+objdump bin sym='""':
+	{{ go }} tool objdump -s {{ sym }} -S bin/{{ bin }} | less
 
 test:
 	{{ go }} test -v ./...
