@@ -44,9 +44,23 @@ Configuration Options:
 	--mpd-password=PASSWD   override cfg.MPD.Password
 `
 
-func maine() int {
+func init() {
 	stdlog.SetFlags(0)
 
+	if config.Debug {
+		var logBuilder strings.Builder
+		defer fmt.Fprint(os.Stderr, &logBuilder)
+		log.Logger = zerolog.New(&zerolog.ConsoleWriter{Out: &logBuilder}).With().Timestamp().Logger()
+
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		stdlog.SetOutput(&log.Logger)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.Disabled)
+		stdlog.SetOutput(io.Discard)
+	}
+}
+
+func maine() int {
 	ctx := context.Background()
 
 	opts, err := docopt.ParseDoc(usage)
@@ -74,6 +88,7 @@ func maine() int {
 	defer conn.Close()
 
 	cfg.FromClient(conn)
+
 	cfg.Expand()
 
 	if opts["--dump-config"].(bool) {
@@ -81,27 +96,14 @@ func maine() int {
 		return 0
 	}
 
-	if config.Debug {
-		var logBuilder strings.Builder
-		defer fmt.Fprint(os.Stderr, &logBuilder)
-		log.Logger = zerolog.New(&zerolog.ConsoleWriter{Out: &logBuilder}).With().Timestamp().Logger()
-
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		stdlog.SetOutput(&log.Logger)
-
-	} else {
-		zerolog.SetGlobalLevel(zerolog.Disabled)
-		stdlog.SetOutput(io.Discard)
-	}
-
-	if config.Debug {
-		fmt.Fprint(os.Stderr, "\n", cfg, "\n")
-	}
-
 	err = cfg.Assert()
 	if err != nil {
 		log.Err(err).Send()
 		return 1
+	}
+
+	if config.Debug {
+		fmt.Fprint(os.Stderr, "\n", cfg, "\n")
 	}
 
 	err = internal.NewApplication(cfg, conn).Run(ctx)

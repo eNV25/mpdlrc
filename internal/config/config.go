@@ -116,26 +116,31 @@ func (cfg *Config) FromClient(c client.Client) {
 }
 
 func (cfg *Config) fromMPDConfig() {
+	if cfg.MusicDir != "" {
+		return
+	}
 	for _, fpath := range &[...]string{
 		filepath.Join(dirs.GetEnv("XDG_CONFIG_HOME"), "mpd", "mpd.conf"),
 		filepath.Join(dirs.HomeDir(""), ".mpdconf"),
 		filepath.Join(dirs.HomeDir(""), ".mpd", "mpd.conf"),
 		filepath.Join(dirs.RootDir(), "etc", "mpd.conf"),
 	} {
-		f, err := os.Open(fpath)
-		if err != nil {
-			continue
-		}
-		defer f.Close()
-		var s mpdconf.Scanner
-		s.Init(f)
-		for s.Next() {
-			if v := s.Str("music_directory"); v != "" {
-				cfg.MusicDir = v
-				cfg.fixLyricsDir()
+		func(fpath string) {
+			f, err := os.Open(fpath)
+			if err != nil {
 				return
 			}
-		}
+			defer f.Close()
+			var s mpdconf.Scanner
+			s.Init(f)
+			for s.Next() {
+				if v := s.Str("music_directory"); v != "" {
+					cfg.MusicDir = v
+					cfg.fixLyricsDir()
+					return
+				}
+			}
+		}(fpath)
 	}
 }
 

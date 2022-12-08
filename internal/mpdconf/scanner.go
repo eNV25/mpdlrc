@@ -62,6 +62,8 @@ func unquote(s string) string {
 	if len(s) <= 2 {
 		return ""
 	}
-	s = strings.ReplaceAll(s, `\"`, `"`)
-	return s[1 : len(s)-1]
+	if strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`) {
+		return strings.ReplaceAll(s[1:len(s)-1], `\"`, `"`)
+	}
+	return s
 }
