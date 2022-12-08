@@ -12,8 +12,8 @@ go-files := "'" + replace(replace(`go list -f '{{ $d := .Dir }}{{ range .GoFiles
 build:
 	{{ go }} build -v -o ./bin/ ./...
 
-run:
-	{{ go }} run -v .
+run *args:
+	{{ go }} run -v . {{ args }}
 
 debug *args:
 	{{ go }} run -v -tags=debug . {{ args }}
