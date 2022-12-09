@@ -10,7 +10,7 @@ go-mod   := `go list -m`
 go-files := "'" + replace(replace(`go list -f '{{ $d := .Dir }}{{ range .GoFiles }}{{ printf "%s/%s\n" $d . }}{{ end }}' ./...`, "'", "'\\''"), "\n", "' '") + "'"
 
 build:
-	{{ go }} build -v -o ./bin/ ./...
+	{{ go }} build -v -o ./bin/ ./ ./cmd/...
 
 run *args:
 	{{ go }} run -v . {{ args }}
@@ -24,7 +24,7 @@ objdump bin sym='""':
 test:
 	{{ go }} test -v ./...
 
-generate: install-tools build && fmt
+generate: build && fmt
 	{{ go }} generate -v ./...
 
 fmt:
@@ -35,12 +35,11 @@ fmt:
 	@ {{ goimports }} -w -l {{ go-files }}
 	@ {{ gofumpt }} -w -l {{ go-files }}
 
-checkfmt: install-tools
+checkfmt:
 	@ ! [ "$({{ gofmt }} -l {{ go-files }} | wc -l)" -gt 0 ]
 	@ ! [ "$({{ goimports }} -l {{ go-files }} | wc -l)" -gt 0 ]
 	@ ! [ "$({{ gofumpt }} -l {{ go-files }} | wc -l)" -gt 0 ]
 
-install-tools should="! command -v goimports":
-	{{ should }} && go install -v golang.org/x/tools/cmd/goimports@latest || true
-	{{ should }} && go install -v mvdan.cc/gofumpt@latest || true
-
+install-tools should="! command -v":
+	{{ should }} goimports && go install -v golang.org/x/tools/cmd/goimports@latest || true
+	{{ should }} gofumpt && go install -v mvdan.cc/gofumpt@latest || true
