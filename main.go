@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	stdlog "log"
+	"log"
 	"os"
 	"strings"
 
@@ -15,8 +15,7 @@ import (
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/internal/dirs"
-	"github.com/env25/mpdlrc/internal/zerolog"
-	"github.com/env25/mpdlrc/internal/zerolog/log"
+	"github.com/env25/mpdlrc/internal/slog"
 )
 
 func main() {
@@ -44,28 +43,19 @@ Configuration Options:
 	--mpd-password=PASSWD   override cfg.MPD.Password
 `
 
-func init() {
-	stdlog.SetFlags(0)
-
+func maine() int {
 	if config.Debug {
+		log.SetFlags(0)
 		var logBuilder strings.Builder
 		defer fmt.Fprint(os.Stderr, &logBuilder)
-		log.Logger = zerolog.New(&zerolog.ConsoleWriter{Out: &logBuilder}).With().Timestamp().Logger()
-
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		stdlog.SetOutput(&log.Logger)
+		log.SetOutput(&logBuilder)
 	} else {
-		zerolog.SetGlobalLevel(zerolog.Disabled)
-		stdlog.SetOutput(io.Discard)
+		log.SetOutput(io.Discard)
 	}
-}
-
-func maine() int {
-	ctx := context.Background()
 
 	opts, err := docopt.ParseDoc(usage)
 	if err != nil {
-		log.Err(err).Send()
+		slog.Error("fatal error", err)
 		return 1
 	}
 
@@ -73,7 +63,7 @@ func maine() int {
 
 	err = cfg.FromFiles(opts["--config"].([]string))
 	if err != nil {
-		log.Err(err).Send()
+		slog.Error("fatal error", err)
 		return 1
 	}
 
@@ -82,7 +72,7 @@ func maine() int {
 
 	conn, err := client.NewMPDClient(&cfg.MPD.Connection, &cfg.MPD.Address, &cfg.MPD.Password, &cfg.LyricsDir)
 	if err != nil {
-		log.Err(err).Send()
+		slog.Error("fatal error", err)
 		return 1
 	}
 	defer conn.Close()
@@ -98,7 +88,7 @@ func maine() int {
 
 	err = cfg.Assert()
 	if err != nil {
-		log.Err(err).Send()
+		slog.Error("fatal error", err)
 		return 1
 	}
 
@@ -106,9 +96,9 @@ func maine() int {
 		fmt.Fprint(os.Stderr, "\n", cfg, "\n")
 	}
 
-	err = internal.NewApplication(cfg, conn).Run(ctx)
+	err = internal.NewApplication(cfg, conn).Run(context.Background())
 	if err != nil {
-		log.Err(err).Send()
+		slog.Error("fatal error", err)
 		return 1
 	}
 
