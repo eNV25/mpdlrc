@@ -13,7 +13,7 @@ import (
 	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/styles"
 	"github.com/env25/mpdlrc/internal/timerpool"
-	"github.com/env25/mpdlrc/internal/urunewidth"
+	"github.com/env25/mpdlrc/internal/xrunewidth"
 )
 
 var _ Widget = &Lyrics{}
@@ -146,7 +146,7 @@ func (w *Lyrics) model(d *lyricsData) *lyricsModel {
 		for c, st := "", -1; len(l) > 0; {
 			c, l, _, st = uniseg.FirstGraphemeClusterInString(l, st)
 			rs := []rune(c)
-			wd := urunewidth.GraphemeWidth(rs)
+			wd := xrunewidth.GraphemeWidth(rs)
 			m.combcs[y][x] = rs
 			m.widths[y][x] = wd
 			x += wd

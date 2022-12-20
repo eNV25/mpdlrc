@@ -1,4 +1,4 @@
-package urunewidth
+package xrunewidth
 
 import "github.com/mattn/go-runewidth"
 

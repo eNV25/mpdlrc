@@ -1,4 +1,4 @@
-package dirs
+package dirs_test
 
 import (
 	"os"
@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
+
+	"github.com/env25/mpdlrc/internal/dirs"
 )
 
 func TestExpandTilde(t *testing.T) {
@@ -16,9 +18,9 @@ func TestExpandTilde(t *testing.T) {
 	}{
 		{"", ""},
 		{s, s},
-		{"~", HomeDir("")},
-		{"~" + s, HomeDir("") + s},
-		{"~" + s + "file", HomeDir("") + s + "file"},
+		{"~", dirs.HomeDir("")},
+		{"~" + s, dirs.HomeDir("") + s},
+		{"~" + s + "file", dirs.HomeDir("") + s + "file"},
 		{"file", "file"},
 		{"some" + s + "random" + s + "file", "some" + s + "random" + s + "file"},
 		{s + "some" + s + "random" + s + "file", s + "some" + s + "random" + s + "file"},
@@ -30,20 +32,20 @@ func TestExpandTilde(t *testing.T) {
 			in  string
 			out string
 		}{
-			{"~" + current.Username, HomeDir(current.Username)},
-			{"~" + current.Username + s, HomeDir(current.Username) + s},
-			{"~" + current.Username + s + "file", HomeDir(current.Username) + s + "file"},
+			{"~" + current.Username, dirs.HomeDir(current.Username)},
+			{"~" + current.Username + s, dirs.HomeDir(current.Username) + s},
+			{"~" + current.Username + s + "file", dirs.HomeDir(current.Username) + s + "file"},
 		}...)
 	case "windows":
 		ts = append(ts, []*struct {
 			in  string
 			out string
 		}{
-			{"~/file\\", HomeDir("") + "\\file\\"},
+			{"~/file\\", dirs.HomeDir("") + "\\file\\"},
 		}...)
 	}
 	for _, c := range ts {
-		out := ExpandTilde(c.in)
+		out := dirs.ExpandTilde(c.in)
 		t.Logf("%q => %q", c.in, out)
 		if !reflect.DeepEqual(out, c.out) {
 			t.Errorf("ExpandTilde(%q) = %q, want %q", c.in, out, c.out)

@@ -1,4 +1,4 @@
-package urunewidth
+package xrunewidth_test
 
 import (
 	"reflect"
@@ -6,6 +6,8 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
+
+	"github.com/env25/mpdlrc/internal/xrunewidth"
 )
 
 func TestGraphemeWidth(t *testing.T) {
@@ -15,7 +17,7 @@ func TestGraphemeWidth(t *testing.T) {
 	gw := 0
 	g := uniseg.NewGraphemes(s)
 	for g.Next() {
-		gw += GraphemeWidth(g.Runes())
+		gw += xrunewidth.GraphemeWidth(g.Runes())
 	}
 
 	if !reflect.DeepEqual(sw, gw) {

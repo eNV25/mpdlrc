@@ -56,9 +56,7 @@ func HomeDir(usr string) string {
 	var u *user.User
 	var err error
 	if usr == "" {
-		h := ""
-		h, err = os.UserHomeDir()
-		if err == nil {
+		if h, err := os.UserHomeDir(); err == nil {
 			return h
 		}
 		u, err = user.Current()

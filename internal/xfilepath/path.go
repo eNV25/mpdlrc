@@ -1,5 +1,5 @@
-// Package ufilepath contains some functions complementing [filepath].
-package ufilepath
+// Package xfilepath contains some functions complementing [filepath].
+package xfilepath
 
 import (
 	"path/filepath"

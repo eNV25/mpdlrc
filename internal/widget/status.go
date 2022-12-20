@@ -12,7 +12,7 @@ import (
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/styles"
-	"github.com/env25/mpdlrc/internal/urunewidth"
+	"github.com/env25/mpdlrc/internal/xrunewidth"
 )
 
 // [playing]     Logic/Russ - *Therapy Music* - Vinyl Days (2022)    [rzscxu]
@@ -162,7 +162,7 @@ func (w *Status) draw(d *statusData) {
 				clstr, cs.c, _, st = uniseg.FirstGraphemeClusterInString(cs.c, st)
 				rs := []rune(clstr)
 				w.SetContent(x, 1, rs[0], rs[1:], cs.s)
-				x += urunewidth.GraphemeWidth(rs)
+				x += xrunewidth.GraphemeWidth(rs)
 			}
 		}
 	}

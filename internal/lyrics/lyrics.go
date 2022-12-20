@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/env25/mpdlrc/internal/ufilepath"
+	"github.com/env25/mpdlrc/internal/xfilepath"
 	"github.com/env25/mpdlrc/lrc"
 )
 
@@ -66,5 +66,5 @@ func newLyrics(file string) (l *Lyrics) {
 
 // ForFile returns [Lyrics] the file in disk.
 func ForFile(file string) *Lyrics {
-	return newLyrics(ufilepath.ReplaceExt(file, ".lrc"))
+	return newLyrics(xfilepath.ReplaceExt(file, ".lrc"))
 }

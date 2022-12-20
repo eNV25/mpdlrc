@@ -1,9 +1,11 @@
-package lrc
+package lrc_test
 
 import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/env25/mpdlrc/lrc"
 )
 
 var tests = &[...]*struct {
@@ -60,7 +62,7 @@ func parseDuration(text string) (du time.Duration) {
 
 func TestParseString(t *testing.T) {
 	for i := range tests {
-		times, lines, err := ParseString(tests[i].lrc)
+		times, lines, err := lrc.ParseString(tests[i].lrc)
 		if err != nil || !reflect.DeepEqual(times, tests[i].times) || !reflect.DeepEqual(lines, tests[i].lines) {
 			t.Errorf("ParseString(%q) != %v, %v, got = %v, %v", tests[i].lrc, tests[i].times, tests[i].lines, times, lines)
 		}
@@ -68,15 +70,15 @@ func TestParseString(t *testing.T) {
 }
 
 var (
-	benchmarkParseStringTimes []time.Duration
-	benchmarkParseStringLines []string
-	benchmarkParseStringError error
+	timesSink []time.Duration
+	linesSink []string
+	errorSink error
 )
 
 func BenchmarkParseString(b *testing.B) {
 	for x := 0; x < b.N; x++ {
 		for i := range tests {
-			benchmarkParseStringTimes, benchmarkParseStringLines, benchmarkParseStringError = ParseString(tests[i].lrc)
+			timesSink, linesSink, errorSink = lrc.ParseString(tests[i].lrc)
 		}
 	}
 }
