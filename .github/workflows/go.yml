@@ -30,6 +30,7 @@ jobs:
           just checkfmt
       - run: |
           go test -race -v ./...
+          go test -race -v -tags=debug ./...
       - run: |
           go build -race -v ./...
           go build -race -v -tags=debug ./...
@@ -45,4 +46,10 @@ jobs:
       - name: golangci-lint
         with:
           skip-cache: true
+        uses: golangci/golangci-lint-action@v3
+      - name: golangci-lint debug
+        with:
+          skip-cache: true
+        env:
+          GOFLAGS: -tags=debug
         uses: golangci/golangci-lint-action@v3

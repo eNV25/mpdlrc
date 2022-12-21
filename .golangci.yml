@@ -17,3 +17,7 @@ linters:
     - stylecheck
     - typecheck
     - unused
+issues:
+  exclude-rules:
+    - path: 'internal/slog/'
+      text: 'context-as-argument: context.Context should be the first parameter of a function'

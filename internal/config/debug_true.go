@@ -5,7 +5,7 @@ package config
 import (
 	"log"
 	"net/http"
-	_ "net/http/pprof"
+	_ "net/http/pprof" // enable pprof for debugging
 )
 
 // Debug is true for debug builds.
