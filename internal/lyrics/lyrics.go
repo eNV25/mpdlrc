@@ -22,34 +22,36 @@ func (l *Lyrics) check() {
 	}
 }
 
-// Len is the number of lines.
-func (l *Lyrics) Len() int {
+type implLyricsSort Lyrics
+
+func (l *implLyricsSort) Len() int {
 	return len(l.Times)
 }
 
-// Less reports whether the element with index i
-// must sort before the element with index j.
-func (l *Lyrics) Less(i, j int) bool {
+func (l *implLyricsSort) Less(i, j int) bool {
 	return l.Times[i] < l.Times[j]
 }
 
-// Swap swaps the lines with indexes i and j.
-func (l *Lyrics) Swap(i, j int) {
+func (l *implLyricsSort) Swap(i, j int) {
 	l.Times[i], l.Times[j], l.Lines[i], l.Lines[j] = l.Times[j], l.Times[i], l.Lines[j], l.Lines[i]
 }
+
+var _ sort.Interface = (*implLyricsSort)(nil)
 
 // Sort sorts lines in ascending order.
 func (l *Lyrics) Sort() {
 	l.check()
-	sort.Sort(l)
+	sort.Sort((*implLyricsSort)(l))
 }
 
 // Search return the first index greater with time than x.
 // The return value minus one is the last index less than or equal to x.
+//
+// The lyrics must be sorted by time.
 func (l *Lyrics) Search(x time.Duration) int {
 	l.check()
-	return sort.Search(l.Len(), func(i int) bool {
-		return l.Times[i] > x
+	return sort.Search(len(l.Times), func(i int) bool {
+		return l.Times[i] >= x
 	})
 }
 

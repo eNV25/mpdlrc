@@ -2,7 +2,6 @@ package widget
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/events"
+	"github.com/env25/mpdlrc/internal/lyrics"
 	"github.com/env25/mpdlrc/internal/panics"
 	"github.com/env25/mpdlrc/internal/styles"
 	"github.com/env25/mpdlrc/internal/timerpool"
@@ -24,8 +24,7 @@ type Lyrics struct {
 }
 
 type lyricsData struct {
-	Times   []time.Duration
-	Lines   []string
+	lyrics.Lyrics
 	Elapsed time.Duration
 	Playing bool
 	index   int
@@ -62,22 +61,8 @@ func (w *Lyrics) Update(ctx context.Context, ev tcell.Event) {
 		d.Lines = data.Lines
 	}
 
-	d.total = len(d.Lines)
-	// This index is the first line after the one to be displayed.
-	d.index = sort.Search(d.total, func(i int) bool { return d.Times[i] > d.Elapsed })
-
-	if d.index < 0 || d.index > d.total {
-		// This path is chosen when index is out of bounds for whatever reason.
-		// Will display nothing. Will not start AfterFunc chain.
-
-		d.index = 0
-		d.total = 1
-		d.Lines = []string{}
-		d.Playing = false
-	} else {
-		// select previous line
-		d.index--
-	}
+	d.total = len(d.Times)
+	d.index = d.Search(d.Elapsed) - 1
 
 	w.update(ctx, d)
 }
