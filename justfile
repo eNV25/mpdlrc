@@ -21,6 +21,9 @@ debug *args:
 objdump bin sym='""':
 	{{ go }} tool objdump -s {{ sym }} -S bin/{{ bin }} | less
 
+list-inline:
+	go build -gcflags='-m' -o /dev/null ./... 2>&1 | grep -e 'can inline' -e 'inlining'
+
 test:
 	{{ go }} test -v ./...
 
