@@ -22,11 +22,11 @@ import (
 
 // MPDClient implents a [Client] for the Music Player Daemon (MPD).
 type MPDClient struct {
-	mu       sync.Mutex
-	closed   atomic.Bool
-	idling   atomic.Bool
-	locked   atomic.Bool
-	unlocked sync.Cond
+	mu     sync.Mutex
+	closed atomic.Bool
+	idling atomic.Bool
+	wait   atomic.Bool
+	nowait sync.Cond
 
 	c *mpd.Client
 
@@ -65,7 +65,7 @@ func newMPDClient(c *mpd.Client, lyricsdir *string) *MPDClient {
 		c:         c,
 		lyricsDir: lyricsdir,
 	}
-	ret.unlocked.L = &ret.mu
+	ret.nowait.L = &ret.mu
 	return ret
 }
 
@@ -74,12 +74,14 @@ func (c *MPDClient) Close() error {
 	if !c.closed.CompareAndSwap(false, true) {
 		return os.ErrClosed
 	}
-	c.locked.Store(false)
-	err := c.noIdle()
-	c.unlocked.Broadcast()
+
+	c.wait.Store(false)
+	c.noIdle()
+	c.nowait.Broadcast()
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	multierr.AppendInto(&err, c.c.Close())
+
+	err := c.c.Close()
 	if err != nil {
 		return err
 	}
@@ -93,27 +95,25 @@ func (c *MPDClient) idle() ([]string, error) {
 	return mpdevs, err
 }
 
-func (c *MPDClient) noIdle() error {
-	if !c.idling.Load() {
-		return nil
+func (c *MPDClient) noIdle() {
+	for c.idling.Load() && c.c.NoIdle() != nil {
 	}
-	return c.c.NoIdle()
 }
 
 func (c *MPDClient) lock() {
-	if !c.locked.CompareAndSwap(false, true) {
+	if !c.wait.CompareAndSwap(false, true) {
 		return
 	}
-	_ = c.noIdle()
+	c.noIdle()
 	c.mu.Lock()
 }
 
 func (c *MPDClient) unlock() {
-	if !c.locked.CompareAndSwap(true, false) {
+	if !c.wait.CompareAndSwap(true, false) {
 		return
 	}
 	c.mu.Unlock()
-	c.unlocked.Broadcast()
+	c.nowait.Broadcast()
 }
 
 // Data returns [Data] for the currectly playing song.
@@ -185,6 +185,9 @@ func (c *MPDClient) Ping() error {
 
 // TogglePause toggles the pause state.
 func (c *MPDClient) TogglePause() bool {
+	if c.closed.Load() {
+		return false
+	}
 	c.lock()
 	defer c.unlock()
 	status, _ := c.c.Status()
@@ -200,17 +203,12 @@ func (c *MPDClient) PostEvents(ctx context.Context) {
 	for {
 		c.mu.Lock()
 
-		for c.locked.Load() {
-			c.unlocked.Wait() // blocks
+		for c.wait.Load() {
+			c.nowait.Wait() // blocks
 		}
 
 		if c.closed.Load() {
 			return
-		}
-		select {
-		case <-ctx.Done():
-			return
-		default:
 		}
 
 		mpdevs, err := c.idle() // blocks
@@ -219,11 +217,6 @@ func (c *MPDClient) PostEvents(ctx context.Context) {
 
 		if c.closed.Load() {
 			return
-		}
-		select {
-		case <-ctx.Done():
-			return
-		default:
 		}
 
 		if err != nil {
@@ -240,15 +233,6 @@ func (c *MPDClient) PostEvents(ctx context.Context) {
 				newEvent = newOptionsEvent
 			default:
 				continue
-			}
-
-			if c.closed.Load() {
-				return
-			}
-			select {
-			case <-ctx.Done():
-				return
-			default:
 			}
 
 			data, err := c.Data()
