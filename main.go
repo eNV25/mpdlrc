@@ -19,7 +19,8 @@ import (
 )
 
 func main() {
-	os.Exit(maine())
+	code, _ := maine()
+	os.Exit(code)
 }
 
 const usage = `
@@ -43,11 +44,16 @@ Configuration Options:
 	--mpd-password=PASSWD   override cfg.MPD.Password
 `
 
-func maine() int {
+func maine() (_ int, err error) {
 	if config.Debug {
-		log.SetFlags(0)
 		var logBuilder strings.Builder
-		defer fmt.Fprint(os.Stderr, &logBuilder)
+		defer func() {
+			if err != nil {
+				slog.Error("main", err)
+			}
+			fmt.Fprint(os.Stderr, &logBuilder)
+		}()
+		log.SetFlags(0)
 		log.SetOutput(&logBuilder)
 	} else {
 		log.SetOutput(io.Discard)
@@ -55,16 +61,14 @@ func maine() int {
 
 	opts, err := docopt.ParseDoc(usage)
 	if err != nil {
-		slog.Error("fatal error", err)
-		return 1
+		return 1, err
 	}
 
 	cfg := config.DefaultConfig()
 
 	err = cfg.FromFiles(opts["--config"].([]string))
 	if err != nil {
-		slog.Error("fatal error", err)
-		return 1
+		return 1, err
 	}
 
 	cfg.FromEnv(dirs.GetEnv)
@@ -72,8 +76,7 @@ func maine() int {
 
 	conn, err := client.NewMPDClient(&cfg.MPD.Connection, &cfg.MPD.Address, &cfg.MPD.Password, &cfg.LyricsDir)
 	if err != nil {
-		slog.Error("fatal error", err)
-		return 1
+		return 1, err
 	}
 	defer conn.Close()
 
@@ -83,13 +86,12 @@ func maine() int {
 
 	if opts["--dump-config"].(bool) {
 		fmt.Print(cfg)
-		return 0
+		return
 	}
 
 	err = cfg.Assert()
 	if err != nil {
-		slog.Error("fatal error", err)
-		return 1
+		return 1, err
 	}
 
 	if config.Debug {
@@ -98,9 +100,8 @@ func maine() int {
 
 	err = internal.NewApplication(cfg, conn).Run(context.Background())
 	if err != nil {
-		slog.Error("fatal error", err)
-		return 1
+		return 1, err
 	}
 
-	return 0
+	return
 }

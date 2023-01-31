@@ -20,3 +20,5 @@ func (a *Args) Int64(k string, v int64)            {}
 func (a *Args) String(k, v string)                 {}
 func (a *Args) Time(k string, v time.Time)         {}
 func (a *Args) Uint64(k string, v uint64)          {}
+
+func (a *Args) Rune(k string, v rune) {}

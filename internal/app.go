@@ -3,8 +3,6 @@ package internal
 
 import (
 	"context"
-	"reflect"
-	"runtime"
 
 	"github.com/gdamore/tcell/v2"
 
@@ -47,40 +45,19 @@ func NewApplication(cfg *config.Config, client *client.MPDClient) *Application {
 
 func noop() {}
 
-func typeName(v any) string {
-	if config.Debug {
-		return reflect.TypeOf(v).String()
-	}
-	return ""
-}
-
-func funcName(fn any) string {
-	if config.Debug {
-		return runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
-	}
-	return ""
-}
-
-func keyName(key tcell.Key) string {
-	if config.Debug {
-		return tcell.KeyNames[key]
-	}
-	return ""
-}
-
 func (app *Application) update(ctx context.Context, ev tcell.Event) {
 	var logAttrs xslog.Args
-	logAttrs.String("Event", typeName(ev))
+	logAttrs.String("Event", xslog.TypeName(ev))
 	switch ev := ev.(type) {
 	case *client.PlayerEvent:
 		app.updateData(ctx, ev, ev.Data)
 	case *client.OptionsEvent:
 		app.updateData(ctx, ev, ev.Data)
 	case *event.Func:
-		logAttrs.String("Func", funcName(ev.Func))
+		logAttrs.String("Func", xslog.FuncName(ev.Func))
 		ev.Func()
 	case *tcell.EventKey:
-		logAttrs.String("Key", keyName(ev.Key()))
+		logAttrs.String("Key", xslog.KeyName(ev.Key()))
 		switch ev.Key() {
 		case tcell.KeyCtrlL:
 			x, y := app.Screen.Size()
@@ -88,7 +65,7 @@ func (app *Application) update(ctx context.Context, ev tcell.Event) {
 		case tcell.KeyCtrlC, tcell.KeyEscape:
 			app.Quit()
 		case tcell.KeyRune:
-			logAttrs.String("Key", string(ev.Rune()))
+			logAttrs.Rune("Key", ev.Rune())
 			switch ev.Rune() {
 			case 'q':
 				app.Quit()
