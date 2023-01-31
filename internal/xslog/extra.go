@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"runtime"
 
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 
 	"github.com/env25/mpdlrc/internal/config"
 )
