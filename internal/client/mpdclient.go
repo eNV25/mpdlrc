@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal/dirs"
 	"github.com/env25/mpdlrc/internal/events"
@@ -135,7 +135,7 @@ func (c *MPDClient) Data() (Data, error) {
 
 	song, songErr := songFuture.Value()
 	status, statusErr := statusFuture.Value()
-	if err = multierr.Append(songErr, statusErr); err != nil {
+	if err = errors.Join(songErr, statusErr); err != nil {
 		return Data{}, err
 	}
 

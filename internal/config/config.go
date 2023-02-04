@@ -10,7 +10,6 @@ import (
 
 	"github.com/docopt/docopt-go"
 	"github.com/pelletier/go-toml/v2"
-	"go.uber.org/multierr"
 
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/dirs"
@@ -82,14 +81,15 @@ func (cfg *Config) String() string {
 }
 
 // FromFiles merges the configuration fore files.
-func (cfg *Config) FromFiles(files []string) (err error) {
+func (cfg *Config) FromFiles(files []string) error {
+	var errs []error
 	for _, fpath := range files {
-		errr := cfg.FromFile(fpath)
-		if errr != nil && !errors.Is(errr, os.ErrNotExist) {
-			multierr.AppendInto(&err, errr)
+		err := cfg.FromFile(fpath)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			errs = append(errs, err)
 		}
 	}
-	return
+	return errors.Join(errs...)
 }
 
 // FromFile merges the configuration from fpath.
@@ -209,15 +209,15 @@ func (cfg *Config) fixLyricsDir() {
 
 // Assert return error if cfg is invalid.
 func (cfg *Config) Assert() error {
-	var err error
+	var errs []error
 	if !filepath.IsAbs(cfg.MusicDir) {
-		multierr.AppendInto(&err, fmt.Errorf("Config: invalid path: MusicDir must be absolute: %s", cfg.MusicDir))
+		errs = append(errs, fmt.Errorf("Config: invalid path: MusicDir must be absolute: %q", cfg.MusicDir))
 	}
 	if !filepath.IsAbs(cfg.LyricsDir) {
-		multierr.AppendInto(&err, fmt.Errorf("Config: invalid path: LyricsDir must be absolute: %s", cfg.LyricsDir))
+		errs = append(errs, fmt.Errorf("Config: invalid path: LyricsDir must be absolute: %q", cfg.LyricsDir))
 	}
 	if strings.ContainsRune(cfg.MPD.Address, os.PathSeparator) && !filepath.IsAbs(cfg.MPD.Address) {
-		multierr.AppendInto(&err, fmt.Errorf("Config: invalid path: MPD.Address (socket) must be absolute: %s", cfg.MPD.Address))
+		errs = append(errs, fmt.Errorf("Config: invalid path: MPD.Address (unix socket) must be absolute: %q", cfg.MPD.Address))
 	}
-	return err
+	return errors.Join(errs...)
 }
