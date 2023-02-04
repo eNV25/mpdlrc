@@ -16,7 +16,7 @@ func TestScanner(t *testing.T) {
 	s.Init(f)
 	s.Next()
 	const expected = "/home/media/Music"
-	if fpath := s.Str("music_directory"); fpath != expected {
+	if fpath, ok := s.Str("music_directory"); !ok || fpath != expected {
 		t.Fatalf("music_directory got %q, should be %q", fpath, expected)
 	}
 }

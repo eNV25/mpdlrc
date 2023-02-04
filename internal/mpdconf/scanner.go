@@ -20,11 +20,11 @@ func (s *Scanner) Init(src io.Reader) {
 }
 
 // Str returns the string value associated with key.
-func (s *Scanner) Str(key string) string {
+func (s *Scanner) Str(key string) (string, bool) {
 	if s.tok == scanner.Ident && key == s.s.TokenText() && s.Next() && s.tok == scanner.String {
-		return unquote(s.s.TokenText())
+		return unquote(s.s.TokenText()), true
 	}
-	return ""
+	return "", false
 }
 
 // Next advances to the next token. It returns false is there are none left.

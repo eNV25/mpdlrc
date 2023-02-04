@@ -134,12 +134,11 @@ func (cfg *Config) fromMPDConfig() {
 			var s mpdconf.Scanner
 			s.Init(f)
 			for s.Next() {
-				if v := s.Str("music_directory"); v != "" {
+				if v, ok := s.Str("music_directory"); ok {
 					cfg.MusicDir = v
-					cfg.fixLyricsDir()
-					return
 				}
 			}
+			cfg.fixLyricsDir()
 		}(fpath)
 	}
 }
