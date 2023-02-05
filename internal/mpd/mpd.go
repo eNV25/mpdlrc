@@ -2,7 +2,7 @@
 package mpd
 
 import (
-	_ "github.com/fhs/gompd/v2/mpd"
+	_ "github.com/fhs/gompd/v2/mpd" // needed by bundle
 )
 
 // Idle sends waits for changes in subsystems and returns the ones that changed.
