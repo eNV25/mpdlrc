@@ -1,4 +1,3 @@
-// Package main
 package main
 
 import (
@@ -12,25 +11,25 @@ import (
 func main() {
 	var fpath string
 
-	flag.StringVar(&fpath, "file", "", "select file")
+	flag.StringVar(&fpath, "file", os.Stdin.Name(), "select file")
 
 	flag.Parse()
 
 	var f *os.File
+	var err error
 
 	if fpath == "" && flag.Arg(0) != "" {
 		fpath = flag.Arg(0)
 	}
 
-	if err := error(nil); fpath == "" {
+	if fpath == os.Stdin.Name() {
 		f = os.Stdin
 	} else {
 		f, err = os.Open(fpath)
 		if err != nil {
 			panic(err)
-		} else {
-			defer f.Close()
 		}
+		defer f.Close()
 	}
 
 	times, lines, err := lrc.ParseReader(f)

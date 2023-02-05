@@ -3,14 +3,16 @@ export GOENV := "."
 
 go        := "go"
 gofmt     := "gofmt -r '(x) -> x' -s"
-goimports := "goimports -local " + go-mod
-gofumpt   := "gofumpt"
+goimports := "go run golang.org/x/tools/cmd/goimports -local " + go-mod
+gofumpt   := "go run mvdan.cc/gofumpt"
 
-go-mod   := `go list -m`
-go-files := "'" + replace(replace(`go list -f '{{ $d := .Dir }}{{ range .GoFiles }}{{ printf "%s/%s\n" $d . }}{{ end }}' ./...`, "'", "'\\''"), "\n", "' '") + "'"
+go-mod   := `go run local/tools/list -sh -m`
+go-files := `go run local/tools/list -sh -gofiles ./... ./tools/...`
+
+_ := `go mod tidy && cd tools && go mod tidy`
 
 build:
-	{{ go }} build -v -o ./bin/ ./ ./cmd/...
+	{{ go }} build -v -o ./bin/ .
 
 run *args:
 	{{ go }} run -v . {{ args }}
@@ -27,7 +29,7 @@ list-inline:
 test:
 	{{ go }} test -v ./...
 
-generate: build && fmt
+generate: && fmt
 	{{ go }} generate -v ./...
 
 fmt:
@@ -42,7 +44,3 @@ checkfmt:
 	@ ! [ "$({{ gofmt }} -l {{ go-files }} | wc -l)" -gt 0 ]
 	@ ! [ "$({{ goimports }} -l {{ go-files }} | wc -l)" -gt 0 ]
 	@ ! [ "$({{ gofumpt }} -l {{ go-files }} | wc -l)" -gt 0 ]
-
-install-tools should="! command -v":
-	{{ should }} goimports && go install -v golang.org/x/tools/cmd/goimports@latest || true
-	{{ should }} gofumpt && go install -v mvdan.cc/gofumpt@latest || true
