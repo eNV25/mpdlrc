@@ -7,3 +7,4 @@ formatter.command = "shfmt"
 name = "go"
 config.local = "github.com/env25/mpdlrc"
 config.gofumpt = true
+config.buildFlags = ["-tags", "debug"]
