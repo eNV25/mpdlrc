@@ -20,6 +20,9 @@ func Get(d time.Duration) *time.Timer {
 //
 // timer cannot be accessed after returning to the pool.
 func Put(timer *time.Timer, consumed bool) {
+	if timer.C == nil { // skip [time.AfterFunc] timers
+		return
+	}
 	if !consumed && !timer.Stop() {
 		<-timer.C
 	}
