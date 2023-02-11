@@ -7,14 +7,14 @@ import (
 type key struct{}
 
 // ContextWithHook returns a [context.Context] after adding the panic handler hook h.
-func ContextWithHook(ctx context.Context, h func()) context.Context {
+func ContextWithHook(ctx context.Context, hs ...func()) context.Context {
 	v := ctx.Value(key{}) // *[]func()
 	if v == nil {
 		v = new([]func())
 		ctx = context.WithValue(ctx, key{}, v)
 	}
 	p := v.(*[]func())
-	*p = append(*p, h)
+	*p = append(*p, hs...)
 	return ctx
 }
 

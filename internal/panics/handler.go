@@ -3,7 +3,8 @@ package panics
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"os"
 	"runtime"
 )
 
@@ -23,5 +24,5 @@ func Handle(ctx context.Context) {
 		}
 		buf = make([]byte, 2*len(buf))
 	}
-	log.Printf("\npanic: %v\n%s\n", r, buf)
+	fmt.Fprintf(os.Stderr, "panic: %+#v\n\n%s", r, buf)
 }

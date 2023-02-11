@@ -127,7 +127,7 @@ func (app *Application) Run(ctx context.Context) (err error) {
 	defer app.Screen.Fini()
 	defer app.Quit()
 
-	ctx = panics.ContextWithHook(ctx, app.Quit)
+	ctx = panics.ContextWithHook(ctx, app.Quit, app.Screen.Fini)
 	ctx = events.ContextWith(ctx, app.events)
 	ctx, app.quit = context.WithCancel(ctx)
 
