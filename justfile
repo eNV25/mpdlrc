@@ -7,7 +7,7 @@ goimports := "go run golang.org/x/tools/cmd/goimports -local " + go-mod
 gofumpt   := "go run mvdan.cc/gofumpt"
 
 go-mod   := `go run _/list -sh -m`
-go-files := `go run _/list -sh -gofiles ./... ./tools/...`
+go-files := `go run _/list -sh -gofiles ./... ./**/`
 
 _ := `go mod tidy && cd _ && go mod tidy`
 
