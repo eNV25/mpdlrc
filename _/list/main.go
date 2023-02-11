@@ -33,9 +33,7 @@ func main() {
 		}
 	case *flag_gofiles:
 		for _, pkg := range pkgs {
-			for _, fpath := range pkg.GoFiles {
-				outputs = append(outputs, fpath)
-			}
+			outputs = append(outputs, pkg.GoFiles...)
 		}
 	default:
 		flag.Usage()

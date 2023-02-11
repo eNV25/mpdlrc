@@ -1,4 +1,4 @@
-module local/tools
+module _
 
 go 1.20
 
