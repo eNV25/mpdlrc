@@ -1,4 +1,4 @@
-package tools
+package _
 
 import (
 	_ "golang.org/x/tools/cmd/goimports"

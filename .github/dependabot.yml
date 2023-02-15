@@ -10,7 +10,7 @@ updates:
     schedule:
       interval: weekly
   - package-ecosystem: gomod
-    directory: /tools
+    directory: /_
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
