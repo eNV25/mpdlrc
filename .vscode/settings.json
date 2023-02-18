@@ -1,7 +1,10 @@
 {
     "gopls": {
+        "buildFlags": [
+            "-tags",
+            "debug"
+        ],
         "gofumpt": true,
-        "local": "github.com/env25/mpdlrc",
-        "buildFlags": ["-tags", "debug"],
+        "local": "github.com/env25/mpdlrc"
     }
 }
