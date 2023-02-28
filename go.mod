@@ -8,7 +8,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/pelletier/go-toml/v2 v2.0.6
-	github.com/rivo/uniseg v0.4.3
+	github.com/rivo/uniseg v0.4.4
 	golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15
 )
 
