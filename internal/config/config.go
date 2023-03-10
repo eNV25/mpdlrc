@@ -82,6 +82,10 @@ func (cfg *Config) String() string {
 
 // FromFiles merges the configuration fore files.
 func (cfg *Config) FromFiles(files []string) error {
+	defaultFiles := [...]string{filepath.Join(dirs.GetEnv("XDG_CONFIG_HOME"), "mpdlrc", "config.toml")}
+	if len(files) == 0 {
+		files = defaultFiles[:]
+	}
 	var errs []error
 	for _, fpath := range files {
 		err := cfg.FromFile(fpath)
