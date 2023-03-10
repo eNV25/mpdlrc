@@ -14,8 +14,9 @@ func GetEnv(key string) string {
 	case "HOME":
 		return HomeDir("")
 	}
+	ret := os.Getenv(key)
 	if strings.HasPrefix(key, "XDG_") {
-		if ret := os.Getenv(key); ret != "" {
+		if ret != "" {
 			return ret
 		}
 		switch key {
@@ -33,9 +34,8 @@ func GetEnv(key string) string {
 		case "XDG_CONFIG_DIRS":
 			return filepath.Join(RootDir(), "etc", "xdg")
 		}
-		return ""
 	}
-	return os.Getenv(key)
+	return ret
 }
 
 // ExpandEnv works like [os.ExpandEnv] but uses [GetEnv].
