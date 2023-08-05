@@ -5,27 +5,34 @@ import (
 	"runtime"
 
 	"github.com/gdamore/tcell/v2"
-
-	"github.com/env25/mpdlrc/internal/config"
 )
 
-func TypeName(v any) string {
-	if config.Debug {
-		return reflect.TypeOf(v).String()
-	}
-	return ""
+func TypeName[T any](t T) typeName[T] {
+	return typeName[T]{}
 }
 
-func FuncName(fn any) string {
-	if config.Debug {
-		return runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
-	}
-	return ""
+type typeName[T any] struct{}
+
+func (typeName[T]) String() string {
+	var t T
+	return reflect.TypeOf(t).String()
 }
 
-func KeyName(key tcell.Key) string {
-	if config.Debug {
-		return tcell.KeyNames[key]
+func FuncName(fn any) funcName {
+	return funcName(reflect.ValueOf(fn).UnsafePointer())
+}
+
+type funcName uintptr
+
+func (fn funcName) String() string {
+	return runtime.FuncForPC(uintptr(fn)).Name()
+}
+
+type Key rune
+
+func (key Key) String() string {
+	if key < 0 {
+		return tcell.KeyNames[tcell.Key(-key)]
 	}
-	return ""
+	return string(key)
 }

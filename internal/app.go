@@ -3,6 +3,8 @@ package internal
 
 import (
 	"context"
+	"log/slog"
+	"reflect"
 
 	"github.com/gdamore/tcell/v2"
 
@@ -11,7 +13,6 @@ import (
 	"github.com/env25/mpdlrc/internal/event"
 	"github.com/env25/mpdlrc/internal/events"
 	"github.com/env25/mpdlrc/internal/panics"
-	"github.com/env25/mpdlrc/internal/slog"
 	"github.com/env25/mpdlrc/internal/widget"
 	"github.com/env25/mpdlrc/internal/xslog"
 )
@@ -46,18 +47,18 @@ func NewApplication(cfg *config.Config, client *client.MPDClient) *Application {
 func noop() {}
 
 func (app *Application) update(ctx context.Context, ev tcell.Event) {
-	var logAttrs xslog.Args
-	logAttrs.String("Event", xslog.TypeName(ev))
+	var logAttrs [4]slog.Attr
+	logAttrs[0] = slog.Any("Event", reflect.TypeOf(ev))
 	switch ev := ev.(type) {
 	case *client.PlayerEvent:
 		app.updateData(ctx, ev, ev.Data)
 	case *client.OptionsEvent:
 		app.updateData(ctx, ev, ev.Data)
 	case *event.Func:
-		logAttrs.String("Func", xslog.FuncName(ev.Func))
+		logAttrs[1] = slog.Any("Func", xslog.FuncName(ev.Func))
 		ev.Func()
 	case *tcell.EventKey:
-		logAttrs.String("Key", xslog.KeyName(ev.Key()))
+		key := xslog.Key(-ev.Key())
 		switch ev.Key() {
 		case tcell.KeyCtrlL:
 			x, y := app.Screen.Size()
@@ -65,7 +66,7 @@ func (app *Application) update(ctx context.Context, ev tcell.Event) {
 		case tcell.KeyCtrlC, tcell.KeyEscape:
 			app.Quit()
 		case tcell.KeyRune:
-			logAttrs.Rune("Key", ev.Rune())
+			key = xslog.Key(ev.Rune())
 			switch ev.Rune() {
 			case 'q':
 				app.Quit()
@@ -73,13 +74,15 @@ func (app *Application) update(ctx context.Context, ev tcell.Event) {
 				app.client.TogglePause()
 			}
 		}
+		logAttrs[2] = slog.Any("Key", key)
 	case *tcell.EventResize:
 		// guaranteed to run at program start
 		x, y := ev.Size()
-		logAttrs.Group("Size", slog.Int("X", x), slog.Int("Y", y))
+		sizeAttrs := [...]slog.Attr{slog.Int("X", x), slog.Int("Y", y)}
+		logAttrs[3] = slog.Attr{Key: "Size", Value: slog.GroupValue(sizeAttrs[:]...)}
 		app.updateResize(ctx, ev, x, y)
 	}
-	slog.Info("Update", logAttrs...)
+	slog.LogAttrs(ctx, slog.LevelDebug, "Update", logAttrs[:]...)
 }
 
 func (app *Application) updateData(ctx context.Context, ev tcell.Event, data client.Data) {
