@@ -4,8 +4,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -15,13 +15,7 @@ import (
 	"github.com/env25/mpdlrc/internal/client"
 	"github.com/env25/mpdlrc/internal/config"
 	"github.com/env25/mpdlrc/internal/dirs"
-	"github.com/env25/mpdlrc/internal/slog"
 )
-
-func main() {
-	code, _ := maine()
-	os.Exit(code)
-}
 
 const usage = `
 Display synchronized lyrics for track playing in MPD.
@@ -45,20 +39,6 @@ Configuration Options:
 `
 
 func maine() (_ int, err error) {
-	if config.Debug {
-		var logBuilder strings.Builder
-		defer func() {
-			if err != nil {
-				slog.Error("main", err)
-			}
-			fmt.Fprint(os.Stderr, &logBuilder)
-		}()
-		log.SetFlags(0)
-		log.SetOutput(&logBuilder)
-	} else {
-		log.SetOutput(io.Discard)
-	}
-
 	opts, err := docopt.ParseDoc(usage)
 	if err != nil {
 		return 1, err
@@ -104,4 +84,22 @@ func maine() (_ int, err error) {
 	}
 
 	return
+}
+
+func main() {
+	var logBuilder strings.Builder
+	log.SetFlags(0)
+	if config.Debug {
+		slog.SetDefault(slog.New(slog.NewTextHandler(&logBuilder, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	} else {
+		log.SetOutput(&logBuilder)
+	}
+
+	code, err := maine()
+	if err != nil {
+		slog.Error("main", err)
+	}
+
+	fmt.Fprint(os.Stderr, &logBuilder)
+	os.Exit(code)
 }

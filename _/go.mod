@@ -1,6 +1,6 @@
 module _
 
-go 1.20
+go 1.21
 
 replace github.com/env25/mpdlrc => ../
 
