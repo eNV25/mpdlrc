@@ -7,7 +7,7 @@ require (
 	github.com/fhs/gompd/v2 v2.3.1-0.20221204164802-46d3f48f8632
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/mattn/go-runewidth v0.0.15
-	github.com/pelletier/go-toml/v2 v2.0.9
+	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/rivo/uniseg v0.4.4
 )
 
