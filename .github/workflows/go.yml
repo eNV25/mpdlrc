@@ -20,7 +20,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - if: matrix.os == 'ubuntu-latest'
-        uses: extractions/setup-just@v1
+        uses: extractions/setup-just@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - if: matrix.os == 'ubuntu-latest'
