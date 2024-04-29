@@ -46,10 +46,10 @@ jobs:
       - name: golangci-lint
         with:
           skip-cache: true
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v5
       - name: golangci-lint debug
         with:
           skip-cache: true
         env:
           GOFLAGS: -tags=debug
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v5
