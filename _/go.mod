@@ -7,7 +7,7 @@ replace github.com/env25/mpdlrc => ../
 require (
 	github.com/env25/mpdlrc v0.7.1
 	github.com/fhs/gompd/v2 v2.3.1-0.20221204164802-46d3f48f8632
-	golang.org/x/tools v0.20.0
+	golang.org/x/tools v0.21.0
 	mvdan.cc/gofumpt v0.6.0
 )
 
