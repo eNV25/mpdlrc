@@ -165,7 +165,9 @@ func (c *MPDClient) lyrics(song Song) *lyrics.Lyrics {
 	old := c.id.Swap(id)
 	if id != old {
 		lrc := lyrics.ForFile(filepath.Join(*c.lyricsDir, filepath.FromSlash(song.File())))
-		lrc.Sort()
+		if lrc != nil {
+			lrc.Sort()
+		}
 		c.lrc = lrc
 	}
 	return c.lrc
